@@ -26,13 +26,17 @@
       </header>
       <div class="scroll">
         <div class="range-intro">
-          <div class="title">어떤 구구단으로 놀까?</div>
-          <div class="sub">단을 고르고 시작해요 (여러 개 OK)</div>
+          <div class="title">어떤 문제로 놀까?</div>
+          <div class="sub">종류를 고르고 시작해요 (여러 개 OK)</div>
         </div>
-        <div class="dan-grid" id="dan-grid"></div>
-        <div class="quick-row">
-          <button class="btn" id="pick-all">전체</button>
-          <button class="btn" id="pick-clear">지우기</button>
+        <div class="op-grid" id="op-grid"></div>
+        <div class="dan-section" id="dan-section">
+          <div class="label">✖️ 곱셈은 몇 단으로 놀까?</div>
+          <div class="dan-grid" id="dan-grid"></div>
+          <div class="quick-row">
+            <button class="btn" id="pick-all">전체 단</button>
+            <button class="btn" id="pick-clear">단 지우기</button>
+          </div>
         </div>
       </div>
       <div style="padding:10px 16px calc(14px + env(safe-area-inset-bottom));">
@@ -54,7 +58,10 @@
           <div class="canvas-inner" id="canvas-inner"></div>
         </div>
         <div class="quiz-right">
-          <div class="question-board"><div class="q" id="q-text">7 × 8</div></div>
+          <div class="question-board">
+            <button class="speak-btn" id="q-speak" aria-label="문제 다시 듣기">🔈</button>
+            <div class="q" id="q-text">7 × 8</div>
+          </div>
           <div class="choices" id="choices"></div>
         </div>
       </div>
@@ -93,6 +100,11 @@
         <img class="ic" src="assets/img/ui/icon-sound.webp" alt="" />
         <span class="lab">소리</span>
         <button class="switch" id="sw-sound" role="switch" aria-checked="true" aria-label="소리 켜기끄기"></button>
+      </div>
+      <div class="setting-row">
+        <span class="ic" style="font-size:26px; text-align:center;">🗣️</span>
+        <span class="lab">음성 안내</span>
+        <button class="switch" id="sw-voice" role="switch" aria-checked="true" aria-label="음성 안내 켜기끄기"></button>
       </div>
 
       <!-- 부모 영역 (게이트 뒤) -->

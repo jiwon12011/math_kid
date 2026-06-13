@@ -5,20 +5,39 @@ const $  = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+// 사칙연산 정의
+const OPS = {
+  add: { sym: "+", word: "더하기", name: "덧셈",   emoji: "➕" },
+  sub: { sym: "−", word: "빼기",   name: "뺄셈",   emoji: "➖" },
+  mul: { sym: "×", word: "곱하기", name: "곱셈",   emoji: "✖️" },
+  div: { sym: "÷", word: "나누기", name: "나눗셈", emoji: "➗" },
+};
+const OP_ORDER = ["add", "sub", "mul", "div"];
+
 /* ---------- 상태 / 저장 ---------- */
 const KEY = "surisuri.v1";
 const defaultState = () => ({
   collected: [],                    // 완성한 동물 id
   current: null,                    // { animalId, revealed: [idx...] }
-  dans: [2, 3, 4, 5],               // 선택 단
+  dans: [2, 3, 4, 5],               // 곱셈 선택 단
+  ops: ["mul"],                     // 선택 연산 종류
   sound: true,
+  voice: true,                      // 음성 안내
   difficulty: "normal",
-  stats: { correct: 0, total: 0, streak: 0, bestStreak: 0, perDan: {} },
+  stats: { correct: 0, total: 0, streak: 0, bestStreak: 0, perDan: {}, perOp: {} },
 });
 let state = load();
 function load() {
-  try { return Object.assign(defaultState(), JSON.parse(localStorage.getItem(KEY)) || {}); }
-  catch { return defaultState(); }
+  let s;
+  try { s = Object.assign(defaultState(), JSON.parse(localStorage.getItem(KEY)) || {}); }
+  catch { s = defaultState(); }
+  // 구버전 저장 호환
+  s.ops = s.ops && s.ops.length ? s.ops : ["mul"];
+  if (typeof s.voice !== "boolean") s.voice = true;
+  s.stats = s.stats || {};
+  s.stats.perDan = s.stats.perDan || {};
+  s.stats.perOp = s.stats.perOp || {};
+  return s;
 }
 function save() { localStorage.setItem(KEY, JSON.stringify(state)); }
 
@@ -43,6 +62,33 @@ const sWrong    = () => { tone(220, 0, .22, "sine", .14); };
 const sComplete = () => [523, 659, 784, 1046].forEach((f, i) => tone(f, i * .11, .3, "triangle", .2));
 const sTap      = () => tone(520, 0, .07, "sine", .1);
 
+/* ---------- 음성 안내 (Web Speech API) ---------- */
+let koVoice = null;
+function loadVoices() {
+  try {
+    const vs = speechSynthesis.getVoices();
+    koVoice = vs.find(v => v.lang === "ko-KR") || vs.find(v => /ko/i.test(v.lang)) || null;
+  } catch {}
+}
+if ("speechSynthesis" in window) {
+  loadVoices();
+  speechSynthesis.onvoiceschanged = loadVoices;
+}
+function speak(text) {
+  if (!state.voice || !("speechSynthesis" in window)) return;
+  try {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = "ko-KR"; u.rate = 0.95; u.pitch = 1.1;
+    if (koVoice) u.voice = koVoice;
+    speechSynthesis.speak(u);
+  } catch {}
+}
+function speakQuestion() {
+  if (!q) return;
+  speak(`${q.a} ${OPS[q.op].word} ${q.b}는?`);
+}
+
 /* ---------- 네비게이션 ---------- */
 function showView(v) {
   $$(".view").forEach(el => el.classList.toggle("active", el.id === "view-" + v));
@@ -53,6 +99,26 @@ function showView(v) {
 $$(".nav button").forEach(b => b.addEventListener("click", () => { sTap(); showView(b.dataset.view); }));
 
 /* ---------- 놀기: 범위 선택 ---------- */
+// 연산 종류 카드
+const opGrid = $("#op-grid");
+OP_ORDER.forEach(key => {
+  const o = OPS[key];
+  const c = document.createElement("button");
+  c.className = "op-card"; c.dataset.op = key;
+  c.setAttribute("aria-pressed", state.ops.includes(key));
+  c.innerHTML = `<span class="oe">${o.emoji}</span> ${o.name}`;
+  c.addEventListener("click", () => {
+    const on = c.getAttribute("aria-pressed") === "true";
+    c.setAttribute("aria-pressed", !on);
+    state.ops = $$(".op-card", opGrid).filter(x => x.getAttribute("aria-pressed") === "true").map(x => x.dataset.op);
+    sTap(); save(); updateDanVisibility();
+  });
+  opGrid.appendChild(c);
+});
+function updateDanVisibility() {
+  $("#dan-section").style.display = state.ops.includes("mul") ? "block" : "none";
+}
+
 const danGrid = $("#dan-grid");
 for (let d = 2; d <= 9; d++) {
   const c = document.createElement("button");
@@ -70,10 +136,19 @@ for (let d = 2; d <= 9; d++) {
 $("#pick-all").addEventListener("click", () => { sTap(); $$(".dan-card").forEach(c => c.setAttribute("aria-pressed", "true")); state.dans = [2,3,4,5,6,7,8,9]; save(); });
 $("#pick-clear").addEventListener("click", () => { sTap(); $$(".dan-card").forEach(c => c.setAttribute("aria-pressed", "false")); state.dans = []; save(); });
 
+updateDanVisibility();
+
 $("#start-quiz").addEventListener("click", () => {
-  if (!state.dans.length) { coach("단을 하나 이상 골라줘!"); return; }
+  if (!state.ops.length) { coachRange("문제 종류를 하나 골라줘!"); return; }
+  if (state.ops.includes("mul") && !state.dans.length) { coachRange("곱셈은 단을 하나 골라줘!"); return; }
   sTap(); startQuiz();
 });
+function coachRange(msg) {
+  let el = $("#range-coach");
+  if (!el) { el = document.createElement("div"); el.id = "range-coach"; el.className = "coach"; el.style.padding = "0 16px 8px";
+    $("#start-quiz").parentElement.insertBefore(el, $("#start-quiz")); }
+  el.textContent = msg;
+}
 
 /* ---------- 놀기: 퀴즈 ---------- */
 let q = null; // { a, b, answer }
@@ -99,6 +174,7 @@ function exitQuiz() {
   $("#play-range").style.display = "flex";
 }
 $("#quiz-back").addEventListener("click", () => { sTap(); exitQuiz(); });
+$("#q-speak").addEventListener("click", () => speakQuestion());
 
 /* 색칠판 만들기 */
 function buildCanvas(animal) {
@@ -134,31 +210,44 @@ function updateProgress(animal) {
   $("#prog-fill").style.width = (n / PATCHES_PER_ANIMAL * 100) + "%";
 }
 
-/* 문제 생성 */
+/* 문제 생성 — 사칙연산 */
 const rnd = n => Math.floor(Math.random() * n);
+const MAXN = { easy: 10, normal: 20, hard: 50 };   // 덧셈/뺄셈 수 범위(난이도별)
 function makeQuestion() {
-  const dans = state.dans.length ? state.dans : [2,3,4,5];
-  let a, b, ans, guard = 0;
-  do { a = dans[rnd(dans.length)]; b = 1 + rnd(9); ans = a * b; guard++; }
-  while (q && a === q.a && b === q.b && guard < 8);
-  return { a, b, answer: ans };
+  const ops = state.ops.length ? state.ops : ["mul"];
+  let a, b, answer, op, guard = 0, key;
+  do {
+    op = ops[rnd(ops.length)];
+    if (op === "mul") {
+      const dans = state.dans.length ? state.dans : [2,3,4,5];
+      a = dans[rnd(dans.length)]; b = 1 + rnd(9); answer = a * b;
+    } else if (op === "add") {
+      const m = MAXN[state.difficulty]; a = 1 + rnd(m); b = 1 + rnd(m); answer = a + b;
+    } else if (op === "sub") {
+      const m = MAXN[state.difficulty]; a = 2 + rnd(m); b = 1 + rnd(a); answer = a - b;
+    } else { // div — 나누어떨어지게
+      const d = 2 + rnd(8), qd = 1 + rnd(9); a = d * qd; b = d; answer = qd;
+    }
+    key = op + a + "x" + b; guard++;
+  } while (q && key === q.key && guard < 8);
+  return { op, a, b, answer, key };
 }
-function distractors(ans, a, b) {
-  const cand = new Set([a*(b+1), a*(b-1), (a+1)*b, (a-1)*b, ans+a, Math.abs(ans-a), ans+1, ans-1, ans+2, ans+a+1]);
-  const spread = state.difficulty === "hard" ? 1 : state.difficulty === "easy" ? 3 : 2;
-  const out = [...cand].filter(x => x > 0 && x !== ans);
-  // easy면 정답과 좀 떨어진 보기 위주
+function distractors( q) {
+  const ans = q.answer;
+  const cand = new Set([ans+1, ans-1, ans+2, ans-2, ans+q.b, ans-q.b, ans+q.a, Math.abs(ans-q.a), ans+3]);
+  const out = [...cand].filter(x => x >= 0 && x !== ans);
   out.sort(() => Math.random() - .5);
-  if (state.difficulty === "easy") out.sort((x,y) => Math.abs(y-ans) - Math.abs(x-ans));
+  if (state.difficulty === "easy") out.sort((x,y) => Math.abs(y-ans) - Math.abs(x-ans)); // 정답과 먼 보기 우선
   const picked = [];
   for (const x of out) { if (!picked.includes(x)) picked.push(x); if (picked.length === 3) break; }
-  while (picked.length < 3) { const x = ans + (picked.length+1)*spread; if (!picked.includes(x) && x!==ans) picked.push(x); }
+  let pad = 1;
+  while (picked.length < 3) { const x = ans + pad; if (x >= 0 && x !== ans && !picked.includes(x)) picked.push(x); pad++; }
   return picked;
 }
 function nextQuestion() {
   q = makeQuestion();
-  $("#q-text").textContent = `${q.a} × ${q.b}`;
-  const opts = [q.answer, ...distractors(q.answer, q.a, q.b)].sort(() => Math.random() - .5);
+  $("#q-text").textContent = `${q.a} ${OPS[q.op].sym} ${q.b}`;
+  const opts = [q.answer, ...distractors(q)].sort(() => Math.random() - .5);
   const box = $("#choices"); box.innerHTML = "";
   opts.forEach(v => {
     const btn = document.createElement("button");
@@ -167,6 +256,7 @@ function nextQuestion() {
     box.appendChild(btn);
   });
   coach("정답을 골라봐!");
+  speakQuestion();
 }
 
 const PRAISE = ["수리수리! ✨", "잘했어! 🎉", "정답이야! 👏", "멋져! 🌟", "좋아 좋아!"];
@@ -178,15 +268,21 @@ function answer(btn, val) {
   const correct = val === q.answer;
   // 통계
   state.stats.total++;
-  const dk = String(q.a);
-  state.stats.perDan[dk] = state.stats.perDan[dk] || { correct: 0, total: 0 };
-  state.stats.perDan[dk].total++;
+  const op = state.stats.perOp[q.op] = state.stats.perOp[q.op] || { correct: 0, total: 0 };
+  op.total++;
+  let dStat = null;
+  if (q.op === "mul") {
+    const dk = String(q.a);
+    dStat = state.stats.perDan[dk] = state.stats.perDan[dk] || { correct: 0, total: 0 };
+    dStat.total++;
+  }
   if (correct) {
     locking = true;
-    state.stats.correct++; state.stats.perDan[dk].correct++;
+    state.stats.correct++; op.correct++; if (dStat) dStat.correct++;
     state.stats.streak++; state.stats.bestStreak = Math.max(state.stats.bestStreak, state.stats.streak);
     btn.classList.add("correct"); sCorrect();
-    coach(PRAISE[rnd(PRAISE.length)], true);
+    const praise = PRAISE[rnd(PRAISE.length)];
+    coach(praise, true); speak(praise.replace(/[^가-힣! ]/g, "").trim() || "정답!");
     $$(".choice").forEach(c => c.disabled = true);
     revealPatch();
     save();
@@ -194,7 +290,8 @@ function answer(btn, val) {
   } else {
     state.stats.streak = 0;
     btn.classList.add("wrong"); btn.disabled = true; sWrong();
-    coach(NUDGE[rnd(NUDGE.length)]);
+    const nudge = NUDGE[rnd(NUDGE.length)];
+    coach(nudge); speak("다시 해볼까?");
     save();
   }
 }
@@ -224,6 +321,7 @@ function completeAnimal() {
   if (!state.collected.includes(animal.id)) state.collected.push(animal.id);
   state.current = null; save();
   sComplete(); burst();
+  speak(`마수리 완성! ${animal.name}를 모았어요!`);
   $("#reward-img").src = animalImg(animal.id);
   $("#reward-name").textContent = `${SETS.find(s=>s.key===animal.set).emoji} ${animal.name}`;
   const r = RARITY[animal.rarity];
@@ -310,6 +408,7 @@ function openLightbox(a) {
 /* ---------- 설정 ---------- */
 function renderSettings() {
   $("#sw-sound").setAttribute("aria-checked", state.sound);
+  $("#sw-voice").setAttribute("aria-checked", state.voice);
   $$("#seg-diff button").forEach(b => b.setAttribute("aria-pressed", b.dataset.d === state.difficulty));
   const s = state.stats;
   $("#st-correct").textContent = s.correct;
@@ -317,6 +416,23 @@ function renderSettings() {
   $("#st-dex").textContent = state.collected.length;
   $("#st-streak").textContent = s.bestStreak;
   const ds = $("#dan-stats"); ds.innerHTML = "";
+  // 연산별 정답률 (해본 것만)
+  const usedOps = OP_ORDER.filter(o => (s.perOp[o] || {}).total);
+  if (usedOps.length) {
+    const opWrap = document.createElement("div"); opWrap.style.marginBottom = "12px";
+    usedOps.forEach(o => {
+      const po = s.perOp[o]; const pct = Math.round(po.correct / po.total * 100);
+      const row = document.createElement("div");
+      row.style.cssText = "display:flex;align-items:center;gap:10px;margin:6px 2px;font-size:16px;";
+      row.innerHTML = `<span style="width:64px;font-family:var(--font-hand)">${OPS[o].emoji} ${OPS[o].name}</span>
+        <div class="set-bar" style="flex:1;margin:0"><i style="width:${pct}%"></i></div>
+        <span style="width:54px;text-align:right;color:var(--ink-soft)">${pct}%</span>`;
+      opWrap.appendChild(row);
+    });
+    ds.appendChild(opWrap);
+    const sub = document.createElement("div"); sub.style.cssText = "font-family:var(--font-hand);font-size:17px;margin:6px 2px 4px;color:var(--ink-soft)"; sub.textContent = "곱셈 단별";
+    ds.appendChild(sub);
+  }
   for (let d = 2; d <= 9; d++) {
     const pd = s.perDan[d] || { correct: 0, total: 0 };
     const pct = pd.total ? Math.round(pd.correct / pd.total * 100) : 0;
@@ -329,6 +445,7 @@ function renderSettings() {
   }
 }
 $("#sw-sound").addEventListener("click", () => { state.sound = !state.sound; save(); renderSettings(); if (state.sound) sTap(); });
+$("#sw-voice").addEventListener("click", () => { state.voice = !state.voice; save(); renderSettings(); if (state.voice) speak("음성 안내를 켰어요"); });
 $$("#seg-diff button").forEach(b => b.addEventListener("click", () => { sTap(); state.difficulty = b.dataset.d; save(); renderSettings(); }));
 $("#reset-all").addEventListener("click", () => {
   if (confirm("정말 모든 기록과 도감을 초기화할까요?")) { state = defaultState(); save(); renderSettings(); }

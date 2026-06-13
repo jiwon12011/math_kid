@@ -1,5 +1,5 @@
 // 수리수리 도감 — 오프라인 캐시 (앱 셸 + 에셋)
-const CACHE = "surisuri-v1";
+const CACHE = "surisuri-v2";
 const SHELL = [
   "./", "./index.html",
   "./css/style.css",
