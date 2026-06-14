@@ -556,6 +556,17 @@ function openLightbox(a) {
   document.addEventListener("keydown", onKey);
   $("#app").appendChild(back);
 }
+// 캔버스에 [아이콘 이미지 + 텍스트]를 중앙정렬로 그림(이모지 글리프 대신 이미지 사용)
+function drawIconText(ctx, img, text, cx, baseY, fontPx, iconPx, gap = 12) {
+  ctx.font = `${fontPx}px 'Hi Melody', sans-serif`;
+  ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+  const tw = ctx.measureText(text).width;
+  const total = (img ? iconPx + gap : 0) + tw;
+  let x = cx - total / 2;
+  if (img) { ctx.drawImage(img, x, baseY - iconPx * 0.8, iconPx, iconPx); x += iconPx + gap; }
+  ctx.fillText(text, x, baseY);
+  ctx.textAlign = "center";
+}
 async function saveAnimalCard(a) {
   try { await document.fonts.load("56px 'Hi Melody'"); } catch {}
   const W = 560, H = 760, pad = 22;
@@ -563,15 +574,14 @@ async function saveAnimalCard(a) {
   const ctx = cv.getContext("2d");
   ctx.fillStyle = "#FFF8E7"; ctx.fillRect(0, 0, W, H);
   ctx.fillStyle = "#fff"; roundRect(ctx, pad, pad, W-pad*2, H-pad*2, 28); ctx.fill();
-  const img = await loadImg(animalImg(a.id));
+  const r = RARITY[a.rarity];
+  const [img, setImg, rarImg] = await Promise.all([loadImg(animalImg(a.id)), loadImg(setOf(a.set).icon), loadImg(r.icon)]);
   if (img) { ctx.save(); roundRect(ctx, pad+16, pad+16, W-pad*2-32, H-pad*2-128, 18); ctx.clip();
     drawCover(ctx, img, pad+16, pad+16, W-pad*2-32, H-pad*2-128); ctx.restore(); }
-  ctx.fillStyle = "#4a3b2a"; ctx.textAlign = "center";
-  ctx.font = "56px 'Hi Melody', sans-serif";
-  ctx.fillText(`${SETS.find(s=>s.key===a.set).emoji} ${a.name}`, W/2, H-64);
-  const r = RARITY[a.rarity];
-  ctx.font = "32px 'Hi Melody', sans-serif"; ctx.fillStyle = "#6b5742";
-  ctx.fillText(`${r.star} ${r.label} · 수리수리 도감`, W/2, H-26);
+  ctx.fillStyle = "#4a3b2a";
+  drawIconText(ctx, setImg, a.name, W/2, H-62, 52, 48, 12);
+  ctx.fillStyle = "#6b5742";
+  drawIconText(ctx, rarImg, `${r.label} · 수리수리 도감`, W/2, H-22, 30, 30, 8);
   cv.toBlob(blob => {
     const url = URL.createObjectURL(blob);
     const el = document.createElement("a"); el.href = url; el.download = `수리수리도감_${a.name}.png`; el.click();
@@ -786,9 +796,8 @@ async function makeStorybook(setKey) {
   const ctx = cv.getContext("2d");
   ctx.fillStyle = "#FFF8E7"; ctx.fillRect(0,0,W,H);
   ctx.fillStyle = "#4a3b2a"; ctx.textAlign = "center";
-  ctx.font = "64px 'Hi Melody', sans-serif";
-  ctx.fillText(`${set.emoji} ${set.name} 그림책`, W/2, 76);
-  const imgs = await Promise.all(animals.map(a => loadImg(animalImg(a.id))));
+  const [setImg, ...imgs] = await Promise.all([loadImg(set.icon), ...animals.map(a => loadImg(animalImg(a.id)))]);
+  drawIconText(ctx, setImg, `${set.name} 그림책`, W/2, 80, 60, 60, 14);
   imgs.forEach((img,i) => {
     const c = i%cols, r = Math.floor(i/cols);
     const x = pad + c*(cellW+pad), y = head + r*(cellH+pad);
