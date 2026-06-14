@@ -12,6 +12,7 @@ Thumbs.db
 assets/illustrations/
 assets/ui/*.png
 assets/ui/source-chromakey/
+assets/ui/emoji-icons/
 
 # Logs
 *.log

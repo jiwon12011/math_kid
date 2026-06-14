@@ -1,5 +1,6 @@
 // 수리수리 도감 — 앱 로직
-import { SETS, ANIMALS, RARITY, PATCH_COLS, PATCH_ROWS, PATCHES_PER_ANIMAL, animalImg } from "./data.js";
+import { SETS, ANIMALS, RARITY, PATCH_COLS, PATCH_ROWS, PATCHES_PER_ANIMAL, animalImg, setOf, EMOJI_ICON } from "./data.js";
+const ico = (src, cls = "ico-img") => `<img class="${cls}" src="${src}" alt="">`;
 
 const $  = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -322,7 +323,7 @@ function applyMask() {
 function updateProgress(animal) {
   const n = state.current.revealed.length;
   $("#prog-text").textContent = `${n} / ${PATCHES_PER_ANIMAL}`;
-  $("#prog-animal").textContent = `${SETS.find(s=>s.key===animal.set).emoji} ${animal.name}`;
+  $("#prog-animal").innerHTML = `${ico(setOf(animal.set).icon, "ico-sm")}${animal.name}`;
   $("#prog-fill").style.width = (n / PATCHES_PER_ANIMAL * 100) + "%";
 }
 
@@ -438,10 +439,10 @@ function completeAnimal() {
   sComplete(); burst();
   speak(`마수리 완성! ${animal.name}를 모았어요!`);
   $("#reward-img").src = animalImg(animal.id);
-  $("#reward-name").textContent = `${SETS.find(s=>s.key===animal.set).emoji} ${animal.name}`;
+  $("#reward-name").innerHTML = `${ico(setOf(animal.set).icon, "ico-md")}${animal.name}`;
   const r = RARITY[animal.rarity];
   if (state.collected.length >= ANIMALS.length) {
-    $("#reward-name").textContent = `🏆 ${animal.name}`;
+    $("#reward-name").innerHTML = `${ico(EMOJI_ICON.trophy, "ico-md")}${animal.name}`;
     $("#reward-rarity").textContent = "도감 50종 완성! 「마스터 도감사」 달성! 🎉";
     speak("도감을 전부 모았어요! 마스터 도감사!");
   } else {
@@ -513,7 +514,7 @@ function renderDex() {
     const have = animals.filter(a => state.collected.includes(a.id)).length;
     const block = document.createElement("div"); block.className = "set-block";
     block.innerHTML = `
-      <div class="set-head"><span class="name">${set.emoji} ${set.name}</span><span class="count">${have}/${animals.length}</span></div>
+      <div class="set-head"><span class="name">${ico(set.icon, "ico-sm")}${set.name}</span><span class="count">${have}/${animals.length}</span></div>
       <div class="set-bar"><i style="width:${have/animals.length*100}%"></i></div>
       <div class="dex-grid"></div>`;
     const grid = $(".dex-grid", block);
@@ -527,8 +528,8 @@ function renderDex() {
     });
     if (have === animals.length) {
       const bk = document.createElement("button");
-      bk.className = "btn book-btn"; bk.textContent = "📚 그림책 만들기";
-      bk.addEventListener("click", () => { sTap(); bk.textContent = "만드는 중…"; makeStorybook(set.key).then(() => bk.textContent = "📚 그림책 만들기"); });
+      bk.className = "btn book-btn"; bk.innerHTML = `${ico(EMOJI_ICON.storybook, "ico-btn")}그림책 만들기`;
+      bk.addEventListener("click", () => { sTap(); bk.textContent = "만드는 중…"; makeStorybook(set.key).then(() => bk.innerHTML = `${ico(EMOJI_ICON.storybook, "ico-btn")}그림책 만들기`); });
       block.appendChild(bk);
     }
     host.appendChild(block);
@@ -539,14 +540,14 @@ function openLightbox(a) {
   const r = RARITY[a.rarity];
   back.innerHTML = `<div class="modal">
     <img class="reward-img" src="${animalImg(a.id)}" alt="${a.name}" />
-    <p class="reward-title">${SETS.find(s=>s.key===a.set).emoji} ${a.name}</p>
+    <p class="reward-title">${ico(setOf(a.set).icon, "ico-md")}${a.name}</p>
     <p class="reward-rarity">${r.star} ${r.label}</p>
-    <button class="btn primary big save" style="margin-top:10px;">📷 그림 저장</button>
+    <button class="btn primary big save" style="margin-top:10px;">${ico(EMOJI_ICON.camera, "ico-btn")}그림 저장</button>
     <button class="btn close" style="width:100%; margin-top:10px;">닫기</button>
   </div>`;
   back.querySelector(".save").addEventListener("click", e => {
     e.stopPropagation(); sTap(); const b = e.currentTarget; b.textContent = "저장 중…";
-    saveAnimalCard(a).then(() => b.textContent = "📷 그림 저장");
+    saveAnimalCard(a).then(() => b.innerHTML = `${ico(EMOJI_ICON.camera, "ico-btn")}그림 저장`);
   });
   back.querySelector(".close").addEventListener("click", () => { sTap(); back.remove(); });
   back.addEventListener("click", e => { if (e.target === back) back.remove(); });
@@ -689,7 +690,7 @@ function renderPlayHome() {
   // 스탬프 7칸
   const strip = $("#stamp-strip");
   const pos = ((state.stampDays - 1) % 7 + 7) % 7;  // 0~6, 오늘 위치
-  let html = `<div class="lbl">🔥 연속 출석 ${state.stampDays}일${state.stampDays>0 && state.stampDays%7===0 ? " · 보너스!" : ""}</div>`;
+  let html = `<div class="lbl">${ico(EMOJI_ICON.fire, "ico-sm")}연속 출석 ${state.stampDays}일${state.stampDays>0 && state.stampDays%7===0 ? ` ${ico(EMOJI_ICON.gift, "ico-sm")}보너스!` : ""}</div>`;
   for (let i = 0; i < 7; i++) {
     const on = state.stampDays > 0 && i <= pos;
     const today = stampedToday && i === pos;
@@ -748,10 +749,11 @@ function maybeCombo(streak) {
 
 /* ---------- 마스코트 리액션 ---------- */
 function mascotReact(type) {
-  const m = $("#mascot"); if (!m) return;
+  const m = $("#mascot"), img = $("#mascot-img"); if (!m || !img) return;
   m.classList.remove("happy", "think");
-  if (type === "happy") { m.textContent = "🤩"; if (!reduceMotion) m.classList.add("happy"); setTimeout(()=>{ m.textContent="🦊"; }, 700); }
-  else { m.textContent = "🤔"; if (!reduceMotion) m.classList.add("think"); setTimeout(()=>{ m.textContent="🦊"; }, 700); }
+  if (type === "happy") { img.src = EMOJI_ICON.foxHappy; if (!reduceMotion) m.classList.add("happy"); }
+  else { img.src = EMOJI_ICON.foxThink; if (!reduceMotion) m.classList.add("think"); }
+  setTimeout(() => { img.src = EMOJI_ICON.fox; }, 800);
 }
 
 /* ---------- 그림책 만들기 (세트 완성 시) ---------- */

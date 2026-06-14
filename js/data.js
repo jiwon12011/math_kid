@@ -3,12 +3,24 @@
 // id는 webp 파일명과 동일: assets/img/animals/<id>.webp
 
 export const SETS = [
-  { key: "farm",   name: "농장 친구들",   emoji: "🚜" },
-  { key: "forest", name: "숲속 친구들",   emoji: "🌳" },
-  { key: "ocean",  name: "바다 친구들",   emoji: "🌊" },
-  { key: "jungle", name: "정글 친구들",   emoji: "🌴" },
-  { key: "polar",  name: "극지방 친구들", emoji: "❄️" },
+  { key: "farm",   name: "농장 친구들",   emoji: "🚜", icon: "assets/img/emoji/set-farm.webp" },
+  { key: "forest", name: "숲속 친구들",   emoji: "🌳", icon: "assets/img/emoji/set-forest.webp" },
+  { key: "ocean",  name: "바다 친구들",   emoji: "🌊", icon: "assets/img/emoji/set-ocean.webp" },
+  { key: "jungle", name: "정글 친구들",   emoji: "🌴", icon: "assets/img/emoji/set-jungle.webp" },
+  { key: "polar",  name: "극지방 친구들", emoji: "❄️", icon: "assets/img/emoji/set-polar.webp" },
 ];
+
+export const setOf = (key) => SETS.find(s => s.key === key) || SETS[0];
+export const EMOJI_ICON = {
+  trophy:    "assets/img/emoji/icon-trophy.webp",
+  fire:      "assets/img/emoji/icon-fire.webp",
+  camera:    "assets/img/emoji/icon-camera.webp",
+  gift:      "assets/img/emoji/icon-gift.webp",
+  storybook: "assets/img/emoji/icon-storybook.webp",
+  fox:       "assets/img/emoji/mascot-fox.webp",
+  foxHappy:  "assets/img/emoji/mascot-fox-happy.webp",
+  foxThink:  "assets/img/emoji/mascot-fox-thinking.webp",
+};
 
 export const ANIMALS = [
   // 🚜 농장
