@@ -24,6 +24,7 @@ const defaultState = () => ({
   sound: true,
   voice: true,                      // 음성 안내
   difficulty: "normal",
+  hasPlayed: false,                 // 한 번이라도 시작했나(바로 시작용)
   lastVisit: "",                    // 데일리 스탬프
   stampDays: 0,
   stats: { correct: 0, total: 0, streak: 0, bestStreak: 0, perDan: {}, perOp: {} },
@@ -95,7 +96,7 @@ function speakQuestion() {
 function showView(v) {
   $$(".view").forEach(el => el.classList.toggle("active", el.id === "view-" + v));
   $$(".nav button").forEach(b => b.setAttribute("aria-current", b.dataset.view === v ? "page" : "false"));
-  if (v === "play") renderPlayHome();
+  if (v === "play") enterPlay();
   if (v === "dex") renderDex();
   if (v === "settings") renderSettings();
 }
@@ -165,8 +166,25 @@ function pickAnimal() {
   save();
   return next;
 }
+// 설정이 유효한가(바로 시작 가능?)
+function canStart() { return state.ops.length && (!state.ops.includes("mul") || state.dans.length); }
+// 놀기 진입 — 해봤고 설정 유효하면 바로 퀴즈, 아니면 선택 화면
+function enterPlay() {
+  if (inQuiz) return;                 // 이미 퀴즈 중이면 유지
+  if (state.hasPlayed && canStart()) startQuiz();
+  else showRangeHome();
+}
+function showRangeHome() {
+  inQuiz = false;
+  $("#play-quiz").style.display = "none";
+  $("#play-range").style.display = "flex";
+  renderPlayHome();
+}
+
+let inQuiz = false;
 let bonusPending = 0;
 function startQuiz() {
+  inQuiz = true; state.hasPlayed = true;
   $("#play-range").style.display = "none";
   $("#play-quiz").style.display = "flex";
   const animal = pickAnimal();
@@ -175,15 +193,13 @@ function startQuiz() {
     const give = Math.min(bonusPending, PATCHES_PER_ANIMAL - state.current.revealed.length);
     for (let i = 0; i < give; i++) revealPatch();
     if (give > 0) coach("출석 보너스! 색을 미리 칠해줬어 🎁", true);
-    bonusPending = 0; save();
+    bonusPending = 0;
   }
+  save();
   nextQuestion();
+  if (stampedToday) { toast(`오늘도 왔구나! 🔥 연속 ${state.stampDays}일 출석!`); stampedToday = false; }
 }
-function exitQuiz() {
-  $("#play-quiz").style.display = "none";
-  $("#play-range").style.display = "flex";
-  renderPlayHome();
-}
+function exitQuiz() { showRangeHome(); }
 $("#quiz-back").addEventListener("click", () => { sTap(); exitQuiz(); });
 $("#q-speak").addEventListener("click", () => speakQuestion());
 
@@ -421,10 +437,38 @@ function openLightbox(a) {
     <img class="reward-img" src="${animalImg(a.id)}" alt="${a.name}" />
     <p class="reward-title">${SETS.find(s=>s.key===a.set).emoji} ${a.name}</p>
     <p class="reward-rarity">${r.star} ${r.label}</p>
-    <button class="btn primary big" style="margin-top:10px;">닫기</button>
+    <button class="btn primary big save" style="margin-top:10px;">📷 그림 저장</button>
+    <button class="btn close" style="width:100%; margin-top:10px;">닫기</button>
   </div>`;
-  back.addEventListener("click", e => { if (e.target === back || e.target.closest("button")) { sTap(); back.remove(); } });
+  back.querySelector(".save").addEventListener("click", e => {
+    e.stopPropagation(); sTap(); const b = e.currentTarget; b.textContent = "저장 중…";
+    saveAnimalCard(a).then(() => b.textContent = "📷 그림 저장");
+  });
+  back.querySelector(".close").addEventListener("click", () => { sTap(); back.remove(); });
+  back.addEventListener("click", e => { if (e.target === back) back.remove(); });
   $("#app").appendChild(back);
+}
+async function saveAnimalCard(a) {
+  try { await document.fonts.load("56px 'Hi Melody'"); } catch {}
+  const W = 560, H = 760, pad = 22;
+  const cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+  const ctx = cv.getContext("2d");
+  ctx.fillStyle = "#FFF8E7"; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = "#fff"; roundRect(ctx, pad, pad, W-pad*2, H-pad*2, 28); ctx.fill();
+  const img = await loadImg(animalImg(a.id));
+  if (img) { ctx.save(); roundRect(ctx, pad+16, pad+16, W-pad*2-32, H-pad*2-128, 18); ctx.clip();
+    drawCover(ctx, img, pad+16, pad+16, W-pad*2-32, H-pad*2-128); ctx.restore(); }
+  ctx.fillStyle = "#4a3b2a"; ctx.textAlign = "center";
+  ctx.font = "56px 'Hi Melody', sans-serif";
+  ctx.fillText(`${SETS.find(s=>s.key===a.set).emoji} ${a.name}`, W/2, H-64);
+  const r = RARITY[a.rarity];
+  ctx.font = "32px 'Hi Melody', sans-serif"; ctx.fillStyle = "#6b5742";
+  ctx.fillText(`${r.star} ${r.label} · 수리수리 도감`, W/2, H-26);
+  cv.toBlob(blob => {
+    const url = URL.createObjectURL(blob);
+    const el = document.createElement("a"); el.href = url; el.download = `수리수리도감_${a.name}.png`; el.click();
+    setTimeout(() => URL.revokeObjectURL(url), 3000);
+  }, "image/png");
 }
 
 /* ---------- 설정 ---------- */
@@ -565,6 +609,14 @@ function renderPlayHome() {
       rh.appendChild(b);
     }
   }
+}
+
+/* ---------- 토스트 ---------- */
+function toast(msg) {
+  const t = document.createElement("div"); t.className = "toast"; t.textContent = msg;
+  $("#app").appendChild(t);
+  requestAnimationFrame(() => t.classList.add("show"));
+  setTimeout(() => { t.classList.remove("show"); setTimeout(() => t.remove(), 300); }, 2400);
 }
 
 /* ---------- 콤보 배너 ---------- */

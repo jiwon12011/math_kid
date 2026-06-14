@@ -134,6 +134,13 @@ img { -webkit-user-drag: none; user-select: none; }
   100%{opacity:0; transform:translateX(-50%) translateY(-10px) scale(.9)}
 }
 
+/* 토스트 */
+.toast { position: absolute; left: 50%; top: 14px; transform: translateX(-50%) translateY(-16px);
+  z-index: 40; background: rgba(74,59,42,.92); color: #fff; font-family: var(--font-hand); font-size: 18px;
+  padding: 10px 20px; border-radius: 999px; box-shadow: 0 6px 16px rgba(0,0,0,.25);
+  opacity: 0; transition: opacity .3s ease, transform .3s ease; pointer-events: none; white-space: nowrap; }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
 /* 마스코트 */
 .mascot { position: absolute; left: 6px; bottom: 6px; width: 46px; height: 46px; border-radius: 50%;
   background: rgba(255,255,255,.85); display: grid; place-items: center; font-size: 26px;
