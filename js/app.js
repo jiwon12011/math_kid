@@ -176,32 +176,36 @@ function exitQuiz() {
 $("#quiz-back").addEventListener("click", () => { sTap(); exitQuiz(); });
 $("#q-speak").addEventListener("click", () => speakQuestion());
 
-/* 색칠판 만들기 */
+/* 색칠판 만들기 — 흑백 base 위에 컬러 레이어, 정답마다 부드러운 둥근 마스크가 번짐 */
+let currentCells = [];
 function buildCanvas(animal) {
   const inner = $("#canvas-inner");
   const url = animalImg(animal.id);
   inner.innerHTML = "";
   const base = document.createElement("img");
   base.className = "base"; base.src = url; base.alt = ""; base.loading = "eager";
-  inner.appendChild(base);
-  for (let r = 0; r < PATCH_ROWS; r++) for (let c = 0; c < PATCH_COLS; c++) {
-    const idx = r * PATCH_COLS + c;
-    const p = document.createElement("div");
-    p.className = "patch"; p.dataset.idx = idx;
-    p.style.left   = (c / PATCH_COLS * 100) + "%";
-    p.style.top    = (r / PATCH_ROWS * 100) + "%";
-    p.style.width  = (100 / PATCH_COLS) + "%";
-    p.style.height = (100 / PATCH_ROWS) + "%";
-    p.style.backgroundImage = `url("${url}")`;
-    p.style.backgroundPosition = `${PATCH_COLS > 1 ? c / (PATCH_COLS - 1) * 100 : 0}% ${PATCH_ROWS > 1 ? r / (PATCH_ROWS - 1) * 100 : 0}%`;
-    inner.appendChild(p);
-  }
-  // 이미 진행된 칸 복원
-  (state.current.revealed || []).forEach(i => {
-    const el = inner.querySelector(`.patch[data-idx="${i}"]`);
-    if (el) el.classList.add("on");
-  });
+  const color = document.createElement("img");
+  color.className = "color"; color.id = "color-layer"; color.src = url; color.alt = ""; color.loading = "eager";
+  inner.appendChild(base); inner.appendChild(color);
+  // 각 칸 중심 좌표(%) — 마스크 번짐 위치
+  currentCells = [];
+  for (let r = 0; r < PATCH_ROWS; r++) for (let c = 0; c < PATCH_COLS; c++)
+    currentCells.push({ x: (c + 0.5) / PATCH_COLS * 100, y: (r + 0.5) / PATCH_ROWS * 100 });
+  applyMask();
   updateProgress(animal);
+}
+function applyMask() {
+  const color = $("#color-layer"); if (!color) return;
+  const rev = state.current.revealed || [];
+  if (!rev.length) { color.style.opacity = "0"; return; }
+  color.style.opacity = "1";
+  // 부드러운 타원 마스크들의 합집합 → 크레용처럼 번진 자국
+  const grads = rev.map(i => {
+    const cell = currentCells[i];
+    return `radial-gradient(42% 32% at ${cell.x}% ${cell.y}%, #000 56%, transparent 90%)`;
+  });
+  color.style.webkitMaskImage = grads.join(",");
+  color.style.maskImage = grads.join(",");
 }
 function updateProgress(animal) {
   const n = state.current.revealed.length;
@@ -302,11 +306,8 @@ function revealPatch() {
   if (!remaining.length) return;
   const idx = remaining[rnd(remaining.length)];
   done.push(idx);
-  const el = $(`#canvas-inner .patch[data-idx="${idx}"]`);
-  if (el) {
-    el.classList.add("on");
-    sparkle(el);
-  }
+  applyMask();
+  magicPop(currentCells[idx]);
   const animal = ANIMALS.find(a => a.id === state.current.animalId);
   updateProgress(animal);
 }
@@ -338,18 +339,20 @@ $("#reward-dex").addEventListener("click", () => {
 
 function coach(msg, good=false) { const c = $("#coach"); c.textContent = msg; c.classList.toggle("good", good); }
 
-/* 스파클 입자 */
-function sparkle(el) {
-  if (reduceMotion) return;
-  const r = el.getBoundingClientRect(), wrap = $(".canvas-wrap").getBoundingClientRect();
-  for (let i = 0; i < 4; i++) {
+/* 번짐 순간 연출 — 글로우 + 스파클 (칸 중심 %좌표) */
+function magicPop(cell) {
+  if (reduceMotion || !cell) return;
+  const wrap = $(".canvas-wrap");
+  const g = document.createElement("div");
+  g.className = "magic-glow"; g.style.left = cell.x + "%"; g.style.top = cell.y + "%";
+  wrap.appendChild(g); setTimeout(() => g.remove(), 600);
+  for (let i = 0; i < 3; i++) {
     const s = document.createElement("div");
     s.className = "spark"; s.textContent = ["✨","⭐","🌟"][rnd(3)];
-    s.style.left = (r.left - wrap.left + r.width * Math.random()) + "px";
-    s.style.top  = (r.top - wrap.top + r.height * Math.random()) + "px";
+    s.style.left = (cell.x + (Math.random()*16-8)) + "%";
+    s.style.top  = (cell.y + (Math.random()*16-8)) + "%";
     s.style.animation = "floatUp .8s ease forwards";
-    $(".canvas-wrap").appendChild(s);
-    setTimeout(() => s.remove(), 850);
+    wrap.appendChild(s); setTimeout(() => s.remove(), 850);
   }
 }
 function burst() {
