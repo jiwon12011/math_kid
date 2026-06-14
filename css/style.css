@@ -358,8 +358,8 @@ img { -webkit-user-drag: none; user-select: none; }
 .switch[aria-checked="true"] { background: var(--good); }
 .switch::after { content:""; position:absolute; top:4px; left:4px; width:28px; height:28px; border-radius:50%; background:#fff; box-shadow:0 2px 4px rgba(0,0,0,.2); transition: left .2s; }
 .switch[aria-checked="true"]::after { left: 32px; }
-.seg { margin-left:auto; display:flex; gap:6px; }
-.seg button { padding: 8px 14px; border-radius: 14px; background:#f0e6d2; font-size:17px; }
+.seg { margin-left:auto; display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; }
+.seg button { padding: 8px 12px; border-radius: 14px; background:#f0e6d2; font-size:16px; }
 .seg button[aria-pressed="true"] { background: var(--gold); }
 
 .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
