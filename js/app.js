@@ -23,7 +23,7 @@ const defaultState = () => ({
   ops: ["mul"],                     // 선택 연산 종류
   sound: true,
   music: true,                      // 배경 음악
-  musicVol: 0.32,                   // 배경 음악 음량(작게 기본)
+  musicVol: 0.55,                   // 배경 음악 음량(부드럽게, 효과음보단 작게)
   sfxVol: 0.9,                      // 효과음 음량
   voice: true,                      // 음성 안내
   difficulty: "normal",
@@ -45,7 +45,7 @@ function load() {
   if (typeof s.voice !== "boolean") s.voice = true;
   if (typeof s.music !== "boolean") s.music = true;
   const clamp01 = (v, d) => (typeof v === "number" && v >= 0 && v <= 1) ? v : d;
-  s.musicVol = clamp01(s.musicVol, 0.32);
+  s.musicVol = clamp01(s.musicVol, 0.55);
   s.sfxVol = clamp01(s.sfxVol, 0.9);
   s.stats = s.stats || {};
   s.stats.perDan = s.stats.perDan || {};
