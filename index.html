@@ -8,9 +8,8 @@
 <meta name="theme-color" content="#f6c544" />
 <link rel="manifest" href="manifest.webmanifest" />
 <link rel="apple-touch-icon" href="assets/img/ui/icon-magic-wand.webp" />
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Jua&display=swap" rel="stylesheet" />
+<link rel="preload" href="assets/fonts/himelody-korean.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="preload" href="assets/fonts/jua-korean.woff2" as="font" type="font/woff2" crossorigin />
 <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
@@ -29,6 +28,9 @@
           <div class="title">어떤 문제로 놀까?</div>
           <div class="sub">종류를 고르고 시작해요 (여러 개 OK)</div>
         </div>
+        <div class="stamp-strip" id="stamp-strip"></div>
+        <div id="weak-banner"></div>
+        <div id="resume-hint"></div>
         <div class="op-grid" id="op-grid"></div>
         <div class="dan-section" id="dan-section">
           <div class="label">✖️ 곱셈은 몇 단으로 놀까?</div>
@@ -57,9 +59,11 @@
         <button class="speak-btn" id="q-speak" aria-label="문제 다시 듣기">🔈</button>
         <div class="q" id="q-text">7 × 8</div>
       </div>
+      <div class="combo-banner" id="combo-banner"></div>
       <div class="quiz-mid">
         <div class="canvas-wrap">
           <div class="canvas-inner" id="canvas-inner"></div>
+          <div class="mascot" id="mascot">🦊</div>
         </div>
         <div class="choices" id="choices"></div>
       </div>
@@ -140,11 +144,12 @@
     <!-- 부모 게이트 모달 -->
     <div class="modal-back" id="gate-modal">
       <div class="modal">
-        <p class="reward-title">부모님 확인</p>
+        <p class="reward-title">🔒 보호자 확인</p>
         <div class="gate">
-          <div class="sub" style="color:var(--ink-soft)">아래 곱셈을 풀어주세요</div>
-          <div class="q" id="gate-q">6 × 7</div>
-          <div class="keys" id="gate-keys"></div>
+          <div class="sub" style="color:var(--ink-soft)">보호자님, 아래 덧셈을 풀어 주세요</div>
+          <div class="q" id="gate-q">37 + 58</div>
+          <div class="gate-input" id="gate-input">?</div>
+          <div class="keypad" id="gate-keys"></div>
           <button class="btn" id="gate-cancel" style="width:100%; margin-top:14px;">취소</button>
         </div>
       </div>

@@ -1,10 +1,14 @@
 // 수리수리 도감 — 오프라인 캐시 (앱 셸 + 에셋)
-const CACHE = "surisuri-v3";
+const CACHE = "surisuri-v4";
 const SHELL = [
   "./", "./index.html",
   "./css/style.css",
   "./js/app.js", "./js/data.js",
   "./manifest.webmanifest",
+  "./assets/fonts/himelody-korean.woff2",
+  "./assets/fonts/himelody-latin.woff2",
+  "./assets/fonts/jua-korean.woff2",
+  "./assets/fonts/jua-latin.woff2",
   "./assets/img/ui/sketchbook-board.webp",
   "./assets/img/ui/sketchbook-question-board-wide.webp",
   "./assets/img/ui/icon-magic-wand.webp",

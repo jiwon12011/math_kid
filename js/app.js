@@ -24,6 +24,8 @@ const defaultState = () => ({
   sound: true,
   voice: true,                      // 음성 안내
   difficulty: "normal",
+  lastVisit: "",                    // 데일리 스탬프
+  stampDays: 0,
   stats: { correct: 0, total: 0, streak: 0, bestStreak: 0, perDan: {}, perOp: {} },
 });
 let state = load();
@@ -93,6 +95,7 @@ function speakQuestion() {
 function showView(v) {
   $$(".view").forEach(el => el.classList.toggle("active", el.id === "view-" + v));
   $$(".nav button").forEach(b => b.setAttribute("aria-current", b.dataset.view === v ? "page" : "false"));
+  if (v === "play") renderPlayHome();
   if (v === "dex") renderDex();
   if (v === "settings") renderSettings();
 }
@@ -162,16 +165,24 @@ function pickAnimal() {
   save();
   return next;
 }
+let bonusPending = 0;
 function startQuiz() {
   $("#play-range").style.display = "none";
   $("#play-quiz").style.display = "flex";
   const animal = pickAnimal();
   buildCanvas(animal);
+  if (bonusPending > 0) {
+    const give = Math.min(bonusPending, PATCHES_PER_ANIMAL - state.current.revealed.length);
+    for (let i = 0; i < give; i++) revealPatch();
+    if (give > 0) coach("출석 보너스! 색을 미리 칠해줬어 🎁", true);
+    bonusPending = 0; save();
+  }
   nextQuestion();
 }
 function exitQuiz() {
   $("#play-quiz").style.display = "none";
   $("#play-range").style.display = "flex";
+  renderPlayHome();
 }
 $("#quiz-back").addEventListener("click", () => { sTap(); exitQuiz(); });
 $("#q-speak").addEventListener("click", () => speakQuestion());
@@ -285,6 +296,7 @@ function answer(btn, val) {
     state.stats.correct++; op.correct++; if (dStat) dStat.correct++;
     state.stats.streak++; state.stats.bestStreak = Math.max(state.stats.bestStreak, state.stats.streak);
     btn.classList.add("correct"); sCorrect();
+    mascotReact("happy"); maybeCombo(state.stats.streak);
     const praise = PRAISE[rnd(PRAISE.length)];
     coach(praise, true); speak(praise.replace(/[^가-힣! ]/g, "").trim() || "정답!");
     $$(".choice").forEach(c => c.disabled = true);
@@ -294,6 +306,7 @@ function answer(btn, val) {
   } else {
     state.stats.streak = 0;
     btn.classList.add("wrong"); btn.disabled = true; sWrong();
+    mascotReact("think");
     const nudge = NUDGE[rnd(NUDGE.length)];
     coach(nudge); speak("다시 해볼까?");
     save();
@@ -392,6 +405,12 @@ function renderDex() {
       if (got) card.addEventListener("click", () => { sTap(); openLightbox(a); });
       grid.appendChild(card);
     });
+    if (have === animals.length) {
+      const bk = document.createElement("button");
+      bk.className = "btn book-btn"; bk.textContent = "📚 그림책 만들기";
+      bk.addEventListener("click", () => { sTap(); bk.textContent = "만드는 중…"; makeStorybook(set.key).then(() => bk.textContent = "📚 그림책 만들기"); });
+      block.appendChild(bk);
+    }
     host.appendChild(block);
   });
 }
@@ -454,28 +473,158 @@ $("#reset-all").addEventListener("click", () => {
   if (confirm("정말 모든 기록과 도감을 초기화할까요?")) { state = defaultState(); save(); renderSettings(); }
 });
 
-/* 부모 게이트 */
-let gateAns = 0;
+/* 부모 게이트 — 두 자리 덧셈 + 키패드 입력(찍기 불가, 아이 못 풂) */
+let gateAns = 0, gateBuf = "";
+function renderGateInput() { $("#gate-input").textContent = gateBuf === "" ? "?" : gateBuf; }
 function openGate() {
-  const a = 3 + rnd(7), b = 3 + rnd(7); gateAns = a * b;
-  $("#gate-q").textContent = `${a} × ${b}`;
-  const opts = [gateAns, gateAns+a, gateAns-b, a*(b+1), (a+1)*b, gateAns+1]
-    .filter((v,i,arr)=>v>0 && arr.indexOf(v)===i).slice(0,6).sort(()=>Math.random()-.5);
+  const a = 13 + rnd(74), b = 13 + rnd(74);   // 13~86
+  gateAns = a + b; gateBuf = "";
+  $("#gate-q").textContent = `${a} + ${b}`;
+  renderGateInput();
   const keys = $("#gate-keys"); keys.innerHTML = "";
-  opts.forEach(v => { const k = document.createElement("button"); k.className="choice"; k.textContent=v;
-    k.addEventListener("click", () => {
-      if (v === gateAns) { $("#gate-modal").classList.remove("show"); $("#parent-locked").style.display="none"; $("#parent-area").style.display="block"; renderSettings(); }
-      else { k.classList.add("wrong"); k.disabled = true; }
-    });
+  ["1","2","3","4","5","6","7","8","9","←","0","✓"].forEach(ch => {
+    const k = document.createElement("button");
+    k.className = "choice key"; k.textContent = ch;
+    k.addEventListener("click", () => gateKey(ch));
     keys.appendChild(k);
   });
   $("#gate-modal").classList.add("show");
+}
+function gateKey(ch) {
+  sTap();
+  if (ch === "←") { gateBuf = gateBuf.slice(0, -1); renderGateInput(); return; }
+  if (ch === "✓") {
+    if (parseInt(gateBuf, 10) === gateAns) {
+      $("#gate-modal").classList.remove("show");
+      $("#parent-locked").style.display = "none"; $("#parent-area").style.display = "block"; renderSettings();
+    } else {
+      const inp = $("#gate-input"); inp.classList.add("wrong-shake");
+      gateBuf = ""; setTimeout(() => { inp.classList.remove("wrong-shake"); renderGateInput(); }, 400);
+    }
+    return;
+  }
+  if (gateBuf.length < 3) { gateBuf += ch; renderGateInput(); }
 }
 $("#open-parent").addEventListener("click", () => { sTap(); openGate(); });
 $("#open-parent").addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openGate(); } });
 $("#gate-cancel").addEventListener("click", () => { sTap(); $("#gate-modal").classList.remove("show"); });
 
+/* ---------- 데일리 스탬프 ---------- */
+function dateKey(d) { return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`; }
+let stampedToday = false;
+function checkDailyStamp() {
+  const today = dateKey(new Date());
+  if (state.lastVisit === today) return;
+  const y = new Date(); y.setDate(y.getDate() - 1);
+  state.stampDays = (state.lastVisit === dateKey(y)) ? (state.stampDays || 0) + 1 : 1;
+  state.lastVisit = today; stampedToday = true;
+  if (state.stampDays % 7 === 0) bonusPending = 3;   // 7일 연속 보너스
+  save();
+}
+
+/* ---------- 놀기 홈 렌더(스탬프·약점·이어하기) ---------- */
+function renderPlayHome() {
+  // 스탬프 7칸
+  const strip = $("#stamp-strip");
+  const pos = ((state.stampDays - 1) % 7 + 7) % 7;  // 0~6, 오늘 위치
+  let html = `<div class="lbl">🔥 연속 출석 ${state.stampDays}일${state.stampDays>0 && state.stampDays%7===0 ? " · 보너스!" : ""}</div>`;
+  for (let i = 0; i < 7; i++) {
+    const on = state.stampDays > 0 && i <= pos;
+    const today = stampedToday && i === pos;
+    html += `<div class="stamp ${on?"on":""} ${today?"today":""}">${on?"⭐":i+1}</div>`;
+  }
+  strip.innerHTML = html;
+
+  // 약점 집중
+  const wb = $("#weak-banner"); wb.innerHTML = "";
+  const weakDans = [], weakOps = [];
+  for (let d = 2; d <= 9; d++) { const p = state.stats.perDan[d]; if (p && p.total >= 5 && p.correct/p.total < 0.6) weakDans.push(d); }
+  OP_ORDER.forEach(o => { const p = state.stats.perOp[o]; if (p && p.total >= 5 && p.correct/p.total < 0.6) weakOps.push(o); });
+  if (weakDans.length || weakOps.length) {
+    const names = [...weakDans.map(d=>d+"단"), ...weakOps.filter(o=>o!=="mul"||!weakDans.length).map(o=>OPS[o].name)];
+    const b = document.createElement("div"); b.className = "banner weak";
+    b.innerHTML = `<span>💪 ${names.slice(0,3).join(", ")} 연습해볼까?</span><button class="go">약점 연습</button>`;
+    b.querySelector(".go").addEventListener("click", () => {
+      sTap();
+      state.ops = [...new Set([...weakOps, ...(weakDans.length ? ["mul"] : [])])];
+      if (!state.ops.length) state.ops = ["mul"];
+      if (weakDans.length) state.dans = weakDans;
+      save(); startQuiz();
+    });
+    wb.appendChild(b);
+  }
+
+  // 이어하기
+  const rh = $("#resume-hint"); rh.innerHTML = "";
+  if (state.current && (state.current.revealed||[]).length > 0 && !state.collected.includes(state.current.animalId)) {
+    const a = ANIMALS.find(x => x.id === state.current.animalId);
+    if (a) {
+      const b = document.createElement("div"); b.className = "banner resume";
+      b.innerHTML = `<img src="${animalImg(a.id)}" alt=""><span>${a.name} 그리는 중 ${state.current.revealed.length}/${PATCHES_PER_ANIMAL}</span><button class="go">이어 그리기</button>`;
+      b.querySelector(".go").addEventListener("click", () => { sTap(); startQuiz(); });
+      rh.appendChild(b);
+    }
+  }
+}
+
+/* ---------- 콤보 배너 ---------- */
+function maybeCombo(streak) {
+  if (!(streak === 3 || streak === 5 || (streak >= 10 && streak % 5 === 0))) return;
+  const el = $("#combo-banner");
+  el.textContent = `${streak}연속! 수리수리 콤보! ✨`;
+  el.classList.remove("show"); void el.offsetWidth; el.classList.add("show");
+  [784, 988, 1318].forEach((f,i) => tone(f, i*.07, .25, "triangle", .18));
+}
+
+/* ---------- 마스코트 리액션 ---------- */
+function mascotReact(type) {
+  const m = $("#mascot"); if (!m) return;
+  m.classList.remove("happy", "think");
+  if (type === "happy") { m.textContent = "🤩"; if (!reduceMotion) m.classList.add("happy"); setTimeout(()=>{ m.textContent="🦊"; }, 700); }
+  else { m.textContent = "🤔"; if (!reduceMotion) m.classList.add("think"); setTimeout(()=>{ m.textContent="🦊"; }, 700); }
+}
+
+/* ---------- 그림책 만들기 (세트 완성 시) ---------- */
+function loadImg(src) { return new Promise(res => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = src; }); }
+function drawCover(ctx, img, x, y, w, h) {
+  const ir = img.width/img.height, br = w/h; let sw, sh, sx, sy;
+  if (ir > br) { sh = img.height; sw = sh*br; sx = (img.width-sw)/2; sy = 0; }
+  else { sw = img.width; sh = sw/br; sx = 0; sy = (img.height-sh)/2; }
+  ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
+}
+async function makeStorybook(setKey) {
+  const set = SETS.find(s => s.key === setKey);
+  const animals = ANIMALS.filter(a => a.set === setKey);
+  try { await document.fonts.load("64px 'Hi Melody'"); } catch {}
+  const cols = 2, rows = Math.ceil(animals.length/cols);
+  const cellW = 420, cellH = 540, pad = 28, head = 110;
+  const W = pad*2 + cols*cellW + (cols-1)*pad;
+  const H = head + rows*cellH + (rows-1)*pad + pad;
+  const cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+  const ctx = cv.getContext("2d");
+  ctx.fillStyle = "#FFF8E7"; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle = "#4a3b2a"; ctx.textAlign = "center";
+  ctx.font = "64px 'Hi Melody', sans-serif";
+  ctx.fillText(`${set.emoji} ${set.name} 그림책`, W/2, 76);
+  const imgs = await Promise.all(animals.map(a => loadImg(animalImg(a.id))));
+  imgs.forEach((img,i) => {
+    const c = i%cols, r = Math.floor(i/cols);
+    const x = pad + c*(cellW+pad), y = head + r*(cellH+pad);
+    ctx.fillStyle = "#fff"; roundRect(ctx, x, y, cellW, cellH, 20); ctx.fill();
+    if (img) drawCover(ctx, img, x+10, y+10, cellW-20, cellH-78);
+    ctx.fillStyle = "#4a3b2a"; ctx.font = "40px 'Hi Melody', sans-serif";
+    ctx.fillText(animals[i].name, x+cellW/2, y+cellH-22);
+  });
+  cv.toBlob(blob => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = `수리수리도감_${set.name}.png`; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 3000);
+  }, "image/png");
+}
+function roundRect(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+
 /* ---------- 시작 ---------- */
+checkDailyStamp();
 showView("play");
 
 /* PWA */
