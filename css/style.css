@@ -147,9 +147,9 @@ img { -webkit-user-drag: none; user-select: none; }
 
 /* 동물 색칠판 (좌) */
 .canvas-wrap {
-  flex: 0 0 48%;
+  flex: 0 0 46%;
   aspect-ratio: 941 / 1672;     /* 일러스트 비율 고정 → 베이스(cover)와 패치가 정확히 겹침 */
-  align-self: start;
+  align-self: center;
   max-height: 100%;
   position: relative;
   border-radius: 18px;
@@ -174,20 +174,21 @@ img { -webkit-user-drag: none; user-select: none; }
 .canvas-spark { position: absolute; inset: 0; pointer-events: none; }
 
 /* 문제+보기 (우) */
-.quiz-right { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 12px; }
 .question-board {
   position: relative;
   background: url("../assets/img/ui/sketchbook-question-board-wide.webp") center/100% 100% no-repeat;
-  min-height: 130px;
+  min-height: 116px;
   display: grid; place-items: center;
-  padding: 28px 18px 20px;
+  padding: 30px 18px 22px;
+  margin-bottom: 2px;
 }
 .question-board .q {
   font-family: var(--font-hand);
-  font-size: clamp(32px, 9.5vw, 48px);
+  font-size: clamp(44px, 14vw, 72px);
   font-weight: 700;
   color: var(--ink);
   text-shadow: 0 2px 4px rgba(74,59,42,.1);
+  letter-spacing: 1px;
 }
 .question-board .speak-btn {
   position: absolute; top: 10px; right: 12px;
@@ -196,16 +197,16 @@ img { -webkit-user-drag: none; user-select: none; }
   box-shadow: 0 2px 6px rgba(74,59,42,.15);
 }
 .question-board .speak-btn:active { transform: scale(.9); }
-.choices { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; flex: 1; }
+.choices { display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: min-content; gap: 12px; flex: 1; align-content: center; }
 .choice {
   border-radius: 24px;
   background: #fff;
   box-shadow: 0 4px 0 rgba(74,59,42,.12), 0 8px 18px rgba(74,59,42,.12);
   border: 3px solid rgba(74,59,42,.08);
   font-family: var(--font-hand);
-  font-size: 36px; font-weight: 700;
+  font-size: 38px; font-weight: 700;
   display: grid; place-items: center;
-  min-height: 64px;
+  min-height: 74px;
   transition: transform .08s ease, box-shadow .08s ease;
 }
 .choice:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(74,59,42,.12); }
