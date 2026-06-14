@@ -35,14 +35,17 @@ function load() {
   try { s = Object.assign(defaultState(), JSON.parse(localStorage.getItem(KEY)) || {}); }
   catch { s = defaultState(); }
   // 구버전 저장 호환
-  s.ops = s.ops && s.ops.length ? s.ops : ["mul"];
+  if (!Array.isArray(s.collected)) s.collected = [];
+  if (!Array.isArray(s.dans)) s.dans = [2, 3, 4, 5];
+  if (!Array.isArray(s.ops) || !s.ops.length) s.ops = ["mul"];
+  if (s.current && !Array.isArray(s.current.revealed)) s.current.revealed = [];
   if (typeof s.voice !== "boolean") s.voice = true;
   s.stats = s.stats || {};
   s.stats.perDan = s.stats.perDan || {};
   s.stats.perOp = s.stats.perOp || {};
   return s;
 }
-function save() { localStorage.setItem(KEY, JSON.stringify(state)); }
+function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {} }
 
 /* ---------- 사운드 (WebAudio, 파일 없이 생성) ---------- */
 let actx;
@@ -91,6 +94,12 @@ function speakQuestion() {
   if (!q) return;
   speak(`${q.a} ${OPS[q.op].word} ${q.b}는?`);
 }
+// iOS: 첫 사용자 제스처에서 오디오/음성 잠금 해제(이후 setTimeout 경로도 소리남)
+function unlockAudio() {
+  try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === "suspended") actx.resume(); } catch {}
+  try { if ("speechSynthesis" in window) { const u = new SpeechSynthesisUtterance(" "); u.volume = 0; speechSynthesis.speak(u); } } catch {}
+}
+window.addEventListener("pointerdown", unlockAudio, { once: true });
 
 /* ---------- 네비게이션 ---------- */
 function showView(v) {
@@ -355,8 +364,22 @@ function completeAnimal() {
   $("#reward-img").src = animalImg(animal.id);
   $("#reward-name").textContent = `${SETS.find(s=>s.key===animal.set).emoji} ${animal.name}`;
   const r = RARITY[animal.rarity];
-  $("#reward-rarity").textContent = `${r.star} ${r.label} 동물을 모았어요!`;
+  if (state.collected.length >= ANIMALS.length) {
+    $("#reward-name").textContent = `🏆 ${animal.name}`;
+    $("#reward-rarity").textContent = "도감 50종 완성! 「마스터 도감사」 달성! 🎉";
+    speak("도감을 전부 모았어요! 마스터 도감사!");
+  } else {
+    $("#reward-rarity").textContent = `${r.star} ${r.label} 동물을 모았어요!`;
+    prefetchNextAnimal();
+  }
   $("#reward-modal").classList.add("show");
+}
+function prefetchNextAnimal() {
+  const next = ANIMALS.find(a => !state.collected.includes(a.id));
+  if (!next) return;
+  const l = document.createElement("link");
+  l.rel = "prefetch"; l.as = "image"; l.href = animalImg(next.id);
+  document.head.appendChild(l);
 }
 $("#reward-next").addEventListener("click", () => {
   sTap(); $("#reward-modal").classList.remove("show");
@@ -404,6 +427,11 @@ function burst() {
 function renderDex() {
   $("#dex-total").textContent = `${state.collected.length} / ${ANIMALS.length}`;
   const host = $("#dex-scroll"); host.innerHTML = "";
+  if (!state.collected.length) {
+    const e = document.createElement("div"); e.className = "dex-empty";
+    e.innerHTML = `아직 모은 동물이 없어요 🐣<br>문제를 풀면 도감이 채워져요!`;
+    host.appendChild(e);
+  }
   SETS.forEach(set => {
     const animals = ANIMALS.filter(a => a.set === set.key);
     const have = animals.filter(a => state.collected.includes(a.id)).length;

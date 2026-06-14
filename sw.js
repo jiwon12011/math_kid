@@ -1,5 +1,5 @@
 // 수리수리 도감 — 오프라인 캐시 (앱 셸 + 에셋)
-const CACHE = "surisuri-v5";
+const CACHE = "surisuri-v6";
 const SHELL = [
   "./", "./index.html",
   "./css/style.css",
@@ -34,6 +34,6 @@ self.addEventListener("fetch", e => {
         const copy = res.clone(); caches.open(CACHE).then(c => c.put(request, copy));
       }
       return res;
-    }).catch(() => hit))
+    }).catch(() => hit || new Response("", { status: 503, statusText: "offline" })))
   );
 });

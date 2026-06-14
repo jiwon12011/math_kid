@@ -30,7 +30,9 @@
   --gold:   #F6C544;
   --radius: 26px;
   --tap:    64px;          /* 아동 터치 타깃 */
+  --shadow-sm: 0 2px 0 rgba(74,59,42,.08), 0 4px 12px rgba(74,59,42,.1);
   --shadow: 0 6px 0 rgba(74,59,42,.12), 0 10px 24px rgba(74,59,42,.14);
+  --shadow-lg: 0 8px 0 rgba(74,59,42,.13), 0 16px 34px rgba(74,59,42,.18);
   --font-hand: "Hi Melody", "Jua", system-ui, sans-serif;
   --font-ui:   "Jua", "Hi Melody", system-ui, sans-serif;
 }
@@ -102,7 +104,7 @@ img { -webkit-user-drag: none; user-select: none; }
 .range-intro .title { font-family: var(--font-hand); font-size: 30px; }
 .range-intro .sub { color: var(--ink-soft); font-size: 17px; margin-top: 2px; }
 /* 데일리 스탬프 */
-.stamp-strip { display: flex; gap: 7px; justify-content: center; align-items: center; background: #fff;
+.stamp-strip { display: flex; gap: 8px; justify-content: center; align-items: center; background: #fff;
   border-radius: 18px; padding: 12px 10px; box-shadow: var(--shadow); margin-bottom: 14px; border: 3px solid rgba(74,59,42,.06); flex-wrap: wrap; }
 .stamp-strip .lbl { font-family: var(--font-hand); font-size: 17px; width: 100%; text-align: center; margin-bottom: 2px; }
 .stamp { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-size: 16px;
@@ -157,7 +159,7 @@ img { -webkit-user-drag: none; user-select: none; }
 /* 사칙연산 종류 선택 */
 .op-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 12px; margin: 8px 0 18px; }
 .op-card {
-  position: relative; min-height: 84px; border-radius: 22px; background: #fff;
+  position: relative; min-height: 84px; border-radius: 20px; background: #fff;
   box-shadow: var(--shadow); border: 3px solid rgba(74,59,42,.08);
   display: flex; align-items: center; justify-content: center; gap: 10px;
   font-family: var(--font-hand); font-size: 26px; transition: transform .08s ease;
@@ -173,7 +175,7 @@ img { -webkit-user-drag: none; user-select: none; }
 .dan-card {
   position: relative;
   min-height: 92px;
-  border-radius: 22px;
+  border-radius: 20px;
   background: #fff;
   box-shadow: var(--shadow);
   border: 3px solid rgba(74,59,42,.08);
@@ -257,6 +259,7 @@ img { -webkit-user-drag: none; user-select: none; }
   display: grid; place-items: center;
   padding: 30px 18px 22px;
   margin-bottom: 2px;
+  border-radius: 16px;
 }
 .question-board .q {
   font-family: var(--font-hand);
@@ -292,7 +295,7 @@ img { -webkit-user-drag: none; user-select: none; }
 @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-7px)} 75%{transform:translateX(7px)} }
 
 .coach { text-align: center; font-family: var(--font-hand); font-size: 22px; color: var(--ink-soft); min-height: 28px; line-height: 1.3; }
-.coach.good { color: var(--good); font-weight: 700; }
+.coach.good { color: #2a8a52; font-weight: 700; }
 
 /* ===== 완성 축하 모달 ===== */
 .modal-back {
@@ -305,7 +308,7 @@ img { -webkit-user-drag: none; user-select: none; }
   background: var(--cream);
   border-radius: 30px; padding: 22px;
   width: 100%; max-width: 360px; text-align: center;
-  box-shadow: var(--shadow); border: 4px solid #fff;
+  box-shadow: var(--shadow-lg); border: 4px solid #fff;
   animation: pop .4s cubic-bezier(.34,1.56,.64,1);
 }
 @keyframes pop { from{transform:scale(.7); opacity:0} to{transform:none; opacity:1} }
@@ -335,7 +338,7 @@ img { -webkit-user-drag: none; user-select: none; }
 .dex-card.shiny:not(.locked)::before {
   content:""; position:absolute; inset:0; z-index:2; pointer-events:none;
   background: linear-gradient(120deg, transparent 40%, rgba(255,255,255,.55) 50%, transparent 60%);
-  background-size: 250% 250%; animation: shimmer 3s linear infinite;
+  background-size: 250% 250%; animation: shimmer 2.5s ease-in-out infinite;
 }
 @keyframes shimmer { from{background-position:120% 0} to{background-position:-30% 0} }
 .dex-card:active { transform: scale(.96); }
@@ -404,4 +407,36 @@ img { -webkit-user-drag: none; user-select: none; }
 @media (min-width: 540px) {
   #app { height: min(900px, 96dvh); margin-top: 2dvh; border-radius: 38px; box-shadow: 0 30px 80px rgba(74,59,42,.25); overflow: hidden; border: 10px solid #fff; }
   body { overflow: auto; }
+}
+
+/* ===== 2차 마감 디테일 (팀 점검 반영) ===== */
+/* 포커스 링 — 키보드 접근성 */
+.choice:focus-visible, .switch:focus-visible, .dan-card:focus-visible,
+.op-card:focus-visible, .keypad .key:focus-visible, .nav button:focus-visible {
+  outline: 3px solid var(--sky); outline-offset: 2px;
+}
+.dex-card:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+
+/* 정답/오답 비색상 표식(색맹 대비) */
+.choice { position: relative; }
+.choice.correct::after, .choice.wrong::after {
+  position: absolute; top: 3px; right: 9px; font-size: 19px; line-height: 1; font-weight: 700;
+}
+.choice.correct::after { content: "✓"; color: var(--good); }
+.choice.wrong::after   { content: "✗"; color: var(--oops); }
+
+/* 작은 그림자 — 토글·키패드 */
+.switch, .keypad .key { box-shadow: var(--shadow-sm); }
+
+/* 스탬프 손그림 각도(라벨 제외) */
+.stamp:nth-child(odd)  { transform: rotate(-3deg); }
+.stamp:nth-child(even) { transform: rotate(3deg); }
+
+/* 배너 썸네일 — 살짝 생생하게 */
+.banner img { filter: grayscale(.55) brightness(1.05) opacity(.88); border-radius: 12px; }
+
+/* 빈 도감 상태 */
+.dex-empty {
+  text-align: center; font-family: var(--font-hand); font-size: 22px;
+  color: var(--ink-soft); line-height: 1.6; padding: 44px 16px 24px;
 }
