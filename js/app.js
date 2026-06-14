@@ -111,11 +111,11 @@ function bgmTick() {
   const ahead = actx.currentTime + 0.25;
   while (bgmNext < ahead) {
     const f = BGM_MELODY[bgmStep % BGM_MELODY.length];
-    if (f) note(f, bgmNext, BGM_STEP * 0.85, "triangle", 0.09, musicBus);
+    if (f) note(f, bgmNext, BGM_STEP * 0.85, "triangle", 0.26, musicBus);
     if (bgmStep % 4 === 0) {            // 4스텝마다 베이스 + 옥타브
       const b = BGM_BASS[Math.floor(bgmStep / 4) % BGM_BASS.length];
-      note(b, bgmNext, BGM_STEP * 3.6, "sine", 0.07, musicBus);
-      note(b * 2, bgmNext, BGM_STEP * 3.2, "triangle", 0.028, musicBus);
+      note(b, bgmNext, BGM_STEP * 3.6, "sine", 0.20, musicBus);
+      note(b * 2, bgmNext, BGM_STEP * 3.2, "triangle", 0.09, musicBus);
     }
     bgmStep++; bgmNext += BGM_STEP;
   }
