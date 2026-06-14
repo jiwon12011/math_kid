@@ -23,6 +23,8 @@ const defaultState = () => ({
   ops: ["mul"],                     // 선택 연산 종류
   sound: true,
   music: true,                      // 배경 음악
+  musicVol: 0.32,                   // 배경 음악 음량(작게 기본)
+  sfxVol: 0.9,                      // 효과음 음량
   voice: true,                      // 음성 안내
   difficulty: "normal",
   hasPlayed: false,                 // 한 번이라도 시작했나(바로 시작용)
@@ -42,6 +44,9 @@ function load() {
   if (s.current && !Array.isArray(s.current.revealed)) s.current.revealed = [];
   if (typeof s.voice !== "boolean") s.voice = true;
   if (typeof s.music !== "boolean") s.music = true;
+  const clamp01 = (v, d) => (typeof v === "number" && v >= 0 && v <= 1) ? v : d;
+  s.musicVol = clamp01(s.musicVol, 0.32);
+  s.sfxVol = clamp01(s.sfxVol, 0.9);
   s.stats = s.stats || {};
   s.stats.perDan = s.stats.perDan || {};
   s.stats.perOp = s.stats.perOp || {};
@@ -50,18 +55,30 @@ function load() {
 function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {} }
 
 /* ---------- 사운드 엔진 (WebAudio, 파일 없이 코드로 생성) ---------- */
-let actx;
+let actx, musicBus, sfxBus;
 function ensureCtx() {
-  try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === "suspended") actx.resume(); } catch {}
+  try {
+    if (!actx) {
+      actx = new (window.AudioContext || window.webkitAudioContext)();
+      musicBus = actx.createGain(); sfxBus = actx.createGain();
+      musicBus.connect(actx.destination); sfxBus.connect(actx.destination);
+      musicBus.gain.value = state.musicVol; sfxBus.gain.value = state.sfxVol;
+    }
+    if (actx.state === "suspended") actx.resume();
+  } catch {}
   return actx;
 }
-// 저수준: 절대 시각(when)에 한 음 — 부드러운 어택/감쇠 엔벨로프
-function note(freq, when, dur, type = "sine", gain = .18) {
+function applyVolumes() {
+  if (!actx) return;
+  try { musicBus.gain.value = state.musicVol; sfxBus.gain.value = state.sfxVol; } catch {}
+}
+// 저수준: 절대 시각(when)에 한 음 — 부드러운 어택/감쇠 엔벨로프, bus로 음량 조절
+function note(freq, when, dur, type = "sine", gain = .18, bus) {
   if (!ensureCtx()) return;
   try {
     const o = actx.createOscillator(), g = actx.createGain();
     o.type = type; o.frequency.value = freq;
-    o.connect(g); g.connect(actx.destination);
+    o.connect(g); g.connect(bus || sfxBus);
     g.gain.setValueAtTime(0, when);
     g.gain.linearRampToValueAtTime(gain, when + .02);
     g.gain.exponentialRampToValueAtTime(.0001, when + dur);
@@ -94,11 +111,11 @@ function bgmTick() {
   const ahead = actx.currentTime + 0.25;
   while (bgmNext < ahead) {
     const f = BGM_MELODY[bgmStep % BGM_MELODY.length];
-    if (f) note(f, bgmNext, BGM_STEP * 0.85, "triangle", 0.05);
+    if (f) note(f, bgmNext, BGM_STEP * 0.85, "triangle", 0.09, musicBus);
     if (bgmStep % 4 === 0) {            // 4스텝마다 베이스 + 옥타브
       const b = BGM_BASS[Math.floor(bgmStep / 4) % BGM_BASS.length];
-      note(b, bgmNext, BGM_STEP * 3.6, "sine", 0.04);
-      note(b * 2, bgmNext, BGM_STEP * 3.2, "triangle", 0.016);
+      note(b, bgmNext, BGM_STEP * 3.6, "sine", 0.07, musicBus);
+      note(b * 2, bgmNext, BGM_STEP * 3.2, "triangle", 0.028, musicBus);
     }
     bgmStep++; bgmNext += BGM_STEP;
   }
@@ -547,6 +564,8 @@ function renderSettings() {
   $("#sw-sound").setAttribute("aria-checked", state.sound);
   $("#sw-music").setAttribute("aria-checked", state.music);
   $("#sw-voice").setAttribute("aria-checked", state.voice);
+  $("#vol-sfx").value = Math.round(state.sfxVol * 100);
+  $("#vol-music").value = Math.round(state.musicVol * 100);
   $$("#seg-diff button").forEach(b => b.setAttribute("aria-pressed", b.dataset.d === state.difficulty));
   const s = state.stats;
   $("#st-correct").textContent = s.correct;
@@ -584,6 +603,9 @@ function renderSettings() {
 }
 $("#sw-sound").addEventListener("click", () => { state.sound = !state.sound; save(); renderSettings(); if (state.sound) sTap(); });
 $("#sw-music").addEventListener("click", () => { state.music = !state.music; save(); renderSettings(); if (state.music) startBGM(); else stopBGM(); });
+$("#vol-sfx").addEventListener("input", e => { state.sfxVol = e.target.value / 100; applyVolumes(); save(); });
+$("#vol-sfx").addEventListener("change", () => sCorrect());   // 놓으면 미리듣기
+$("#vol-music").addEventListener("input", e => { state.musicVol = e.target.value / 100; applyVolumes(); save(); if (state.music) startBGM(); });
 $("#sw-voice").addEventListener("click", () => { state.voice = !state.voice; save(); renderSettings(); if (state.voice) speak("음성 안내를 켰어요"); });
 $$("#seg-diff button").forEach(b => b.addEventListener("click", () => { sTap(); state.difficulty = b.dataset.d; save(); renderSettings(); }));
 $("#reset-all").addEventListener("click", () => {

@@ -440,3 +440,24 @@ img { -webkit-user-drag: none; user-select: none; }
   text-align: center; font-family: var(--font-hand); font-size: 22px;
   color: var(--ink-soft); line-height: 1.6; padding: 44px 16px 24px;
 }
+
+/* 음량 슬라이더 */
+.slider-row .lab { flex: none; }
+input.vol {
+  -webkit-appearance: none; appearance: none;
+  margin-left: auto; width: 46%; max-width: 200px; height: 14px;
+  border-radius: 999px; background: #ece0c8; outline: none;
+  box-shadow: inset 0 2px 4px rgba(74,59,42,.12);
+}
+input.vol::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 30px; height: 30px; border-radius: 50%;
+  background: linear-gradient(180deg,#ffe49c,#f6c544); border: 3px solid #fff;
+  box-shadow: var(--shadow-sm); cursor: pointer;
+}
+input.vol::-moz-range-thumb {
+  width: 30px; height: 30px; border-radius: 50%;
+  background: linear-gradient(180deg,#ffe49c,#f6c544); border: 3px solid #fff;
+  box-shadow: var(--shadow-sm); cursor: pointer;
+}
+input.vol:focus-visible { outline: 3px solid var(--sky); outline-offset: 3px; }
