@@ -22,6 +22,7 @@ const defaultState = () => ({
   dans: [2, 3, 4, 5],               // 곱셈 선택 단
   ops: ["mul"],                     // 선택 연산 종류
   sound: true,
+  music: true,                      // 배경 음악
   voice: true,                      // 음성 안내
   difficulty: "normal",
   hasPlayed: false,                 // 한 번이라도 시작했나(바로 시작용)
@@ -40,6 +41,7 @@ function load() {
   if (!Array.isArray(s.ops) || !s.ops.length) s.ops = ["mul"];
   if (s.current && !Array.isArray(s.current.revealed)) s.current.revealed = [];
   if (typeof s.voice !== "boolean") s.voice = true;
+  if (typeof s.music !== "boolean") s.music = true;
   s.stats = s.stats || {};
   s.stats.perDan = s.stats.perDan || {};
   s.stats.perOp = s.stats.perOp || {};
@@ -47,26 +49,66 @@ function load() {
 }
 function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {} }
 
-/* ---------- 사운드 (WebAudio, 파일 없이 생성) ---------- */
+/* ---------- 사운드 엔진 (WebAudio, 파일 없이 코드로 생성) ---------- */
 let actx;
-function tone(freq, t0, dur, type = "sine", gain = .18) {
-  if (!state.sound) return;
+function ensureCtx() {
+  try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === "suspended") actx.resume(); } catch {}
+  return actx;
+}
+// 저수준: 절대 시각(when)에 한 음 — 부드러운 어택/감쇠 엔벨로프
+function note(freq, when, dur, type = "sine", gain = .18) {
+  if (!ensureCtx()) return;
   try {
-    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
     const o = actx.createOscillator(), g = actx.createGain();
     o.type = type; o.frequency.value = freq;
     o.connect(g); g.connect(actx.destination);
-    const t = actx.currentTime + t0;
-    g.gain.setValueAtTime(0, t);
-    g.gain.linearRampToValueAtTime(gain, t + .02);
-    g.gain.exponentialRampToValueAtTime(.0001, t + dur);
-    o.start(t); o.stop(t + dur);
+    g.gain.setValueAtTime(0, when);
+    g.gain.linearRampToValueAtTime(gain, when + .02);
+    g.gain.exponentialRampToValueAtTime(.0001, when + dur);
+    o.start(when); o.stop(when + dur);
   } catch {}
 }
-const sCorrect  = () => { tone(660, 0, .15, "triangle"); tone(880, .08, .2, "triangle"); };
-const sWrong    = () => { tone(220, 0, .22, "sine", .14); };
-const sComplete = () => [523, 659, 784, 1046].forEach((f, i) => tone(f, i * .11, .3, "triangle", .2));
-const sTap      = () => tone(520, 0, .07, "sine", .1);
+// 효과음(소리 토글 적용) — 현재 시점 기준
+function tone(freq, t0, dur, type = "sine", gain = .18) {
+  if (!state.sound || !ensureCtx()) return;
+  note(freq, actx.currentTime + t0, dur, type, gain);
+}
+
+/* ===== 효과음 3종(+탭/반짝) — 코드 생성 ===== */
+// ① 정답: 도-미-솔 밝은 상승 블립
+const sCorrect  = () => [523.25, 659.25, 783.99].forEach((f, i) => tone(f, i * .06, .18, "triangle", .16));
+// ② 오답: 부드러운 2음 하강(거슬리지 않게)
+const sWrong    = () => { tone(392, 0, .16, "sine", .13); tone(293.66, .1, .22, "sine", .12); };
+// ③ 완성: 도-미-솔-도-미 팡파르
+const sComplete = () => [523.25, 659.25, 783.99, 1046.5, 1318.5].forEach((f, i) => tone(f, i * .1, .32, "triangle", .18));
+const sTap      = () => tone(520, 0, .06, "sine", .08);
+const sReveal   = () => { tone(1174.7, 0, .12, "sine", .07); tone(1568, .05, .14, "sine", .05); }; // 색칠 반짝
+
+/* ===== 배경 음악(BGM) — 펜타토닉 멜로디 루프, 코드 생성 ===== */
+const BGM_MELODY = [392,440,523.25,440,392,329.63,392,null, 440,523.25,587.33,523.25,440,392,329.63,null];
+const BGM_BASS   = [130.81, 110, 87.31, 98]; // C3 A2 F2 G2
+const BGM_STEP   = 0.34;
+let bgmTimer = null, bgmStep = 0, bgmNext = 0;
+function bgmTick() {
+  if (!actx) return;
+  const ahead = actx.currentTime + 0.25;
+  while (bgmNext < ahead) {
+    const f = BGM_MELODY[bgmStep % BGM_MELODY.length];
+    if (f) note(f, bgmNext, BGM_STEP * 0.85, "triangle", 0.05);
+    if (bgmStep % 4 === 0) {            // 4스텝마다 베이스 + 옥타브
+      const b = BGM_BASS[Math.floor(bgmStep / 4) % BGM_BASS.length];
+      note(b, bgmNext, BGM_STEP * 3.6, "sine", 0.04);
+      note(b * 2, bgmNext, BGM_STEP * 3.2, "triangle", 0.016);
+    }
+    bgmStep++; bgmNext += BGM_STEP;
+  }
+}
+function startBGM() {
+  if (!state.music || bgmTimer || !ensureCtx()) return;
+  bgmNext = actx.currentTime + 0.15;
+  bgmTimer = setInterval(bgmTick, 70);
+}
+function stopBGM() { if (bgmTimer) { clearInterval(bgmTimer); bgmTimer = null; } }
 
 /* ---------- 음성 안내 (Web Speech API) ---------- */
 let koVoice = null;
@@ -96,8 +138,9 @@ function speakQuestion() {
 }
 // iOS: 첫 사용자 제스처에서 오디오/음성 잠금 해제(이후 setTimeout 경로도 소리남)
 function unlockAudio() {
-  try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === "suspended") actx.resume(); } catch {}
+  ensureCtx();
   try { if ("speechSynthesis" in window) { const u = new SpeechSynthesisUtterance(" "); u.volume = 0; speechSynthesis.speak(u); } } catch {}
+  startBGM();   // 음악 켜져 있으면 첫 제스처에서 시작
 }
 window.addEventListener("pointerdown", unlockAudio, { once: true });
 
@@ -345,7 +388,7 @@ function revealPatch() {
   const idx = remaining[rnd(remaining.length)];
   done.push(idx);
   applyMask();
-  magicPop(currentCells[idx]);
+  magicPop(currentCells[idx]); sReveal();
   const animal = ANIMALS.find(a => a.id === state.current.animalId);
   updateProgress(animal);
 }
@@ -502,6 +545,7 @@ async function saveAnimalCard(a) {
 /* ---------- 설정 ---------- */
 function renderSettings() {
   $("#sw-sound").setAttribute("aria-checked", state.sound);
+  $("#sw-music").setAttribute("aria-checked", state.music);
   $("#sw-voice").setAttribute("aria-checked", state.voice);
   $$("#seg-diff button").forEach(b => b.setAttribute("aria-pressed", b.dataset.d === state.difficulty));
   const s = state.stats;
@@ -539,6 +583,7 @@ function renderSettings() {
   }
 }
 $("#sw-sound").addEventListener("click", () => { state.sound = !state.sound; save(); renderSettings(); if (state.sound) sTap(); });
+$("#sw-music").addEventListener("click", () => { state.music = !state.music; save(); renderSettings(); if (state.music) startBGM(); else stopBGM(); });
 $("#sw-voice").addEventListener("click", () => { state.voice = !state.voice; save(); renderSettings(); if (state.voice) speak("음성 안내를 켰어요"); });
 $$("#seg-diff button").forEach(b => b.addEventListener("click", () => { sTap(); state.difficulty = b.dataset.d; save(); renderSettings(); }));
 $("#reset-all").addEventListener("click", () => {
