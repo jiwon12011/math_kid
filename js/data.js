@@ -85,9 +85,15 @@ export const ANIMALS = [
 ];
 
 export const RARITY = {
-  common: { label: "흔함",   star: "⭐"   },
-  rare:   { label: "특별",   star: "🌟"   },
-  shiny:  { label: "반짝이", star: "✨"   },
+  common: { label: "흔함",   star: "⭐", icon: "assets/img/emoji/rarity-common-star.webp" },
+  rare:   { label: "특별",   star: "🌟", icon: "assets/img/emoji/rarity-rare-star.webp" },
+  shiny:  { label: "반짝이", star: "✨", icon: "assets/img/emoji/rarity-shiny-sparkle.webp" },
+};
+
+export const NAV_ICON = {
+  play: "assets/img/emoji/nav-play-crayon.webp",
+  dex:  "assets/img/emoji/nav-dex-book.webp",
+  settings: "assets/img/emoji/nav-settings-gear.webp",
 };
 
 // 그림 1장 완성에 필요한 정답 수 = 패치 칸 수 (4열 × 3행)

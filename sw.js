@@ -1,5 +1,11 @@
 // 수리수리 도감 — 오프라인 캐시 (앱 셸 + 에셋)
-const CACHE = "surisuri-v14";
+const CACHE = "surisuri-v15";
+const EMOJI = ["mascot-fox","mascot-fox-happy","mascot-fox-thinking",
+  "nav-play-crayon","nav-dex-book","nav-settings-gear",
+  "set-farm","set-forest","set-ocean","set-jungle","set-polar",
+  "icon-fire","icon-gift","icon-camera","icon-trophy","icon-storybook",
+  "rarity-common-star","rarity-rare-star","rarity-shiny-sparkle"
+].map(n => `./assets/img/emoji/${n}.webp`);
 const SHELL = [
   "./", "./index.html",
   "./css/style.css",
@@ -16,6 +22,7 @@ const SHELL = [
   "./assets/img/ui/icon-sound.webp",
   "./assets/img/ui/icon-settings.webp",
   "./assets/img/ui/icon-parent-lock.webp",
+  ...EMOJI,
 ];
 
 self.addEventListener("install", e => {

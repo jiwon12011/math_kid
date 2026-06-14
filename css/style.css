@@ -469,3 +469,17 @@ input.vol:focus-visible { outline: 3px solid var(--sky); outline-offset: 3px; }
 .ico-btn { width:1.4em;  height:1.4em;  margin-right:7px; vertical-align:-0.28em; }
 .set-head .name .ico-sm { width:30px; height:30px; }
 .mascot img { width:88%; height:88%; object-fit:contain; }
+
+/* 네비 아이콘 이미지 */
+.nav button .ni-img { width: 30px; height: 30px; object-fit: contain; }
+
+/* ===== 아이콘 통합 정합성(팀 점검) ===== */
+.progress-label .ico-sm { width:1.5em; height:1.5em; margin-right:7px; vertical-align:-0.32em; }
+.set-head .name .ico-sm { width:26px; height:26px; margin-right:6px; vertical-align:-0.22em; }
+.nav button { gap:4px; }
+.nav button .ni-img { width:28px; height:28px; }
+.nav button:not([aria-current="page"]) .ni-img { opacity:.82; }
+.reward-title .ico-md { width:1.25em; height:1.25em; vertical-align:-0.24em; }
+.reward-rarity { display:flex; align-items:center; justify-content:center; gap:6px; }
+.reward-rarity .ico-sm { width:22px; height:22px; margin-right:0; }
+.stamp-strip .lbl { display:flex; align-items:center; justify-content:center; gap:6px; }

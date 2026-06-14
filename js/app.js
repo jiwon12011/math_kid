@@ -184,7 +184,7 @@ function showView(v) {
   $$(".nav button").forEach(b => b.setAttribute("aria-current", b.dataset.view === v ? "page" : "false"));
   if (v === "play") enterPlay();
   if (v === "dex") renderDex();
-  if (v === "settings") renderSettings();
+  if (v === "settings") { lockParent(); renderSettings(); }
 }
 $$(".nav button").forEach(b => b.addEventListener("click", () => { sTap(); showView(b.dataset.view); }));
 
@@ -446,7 +446,7 @@ function completeAnimal() {
     $("#reward-rarity").textContent = "도감 50종 완성! 「마스터 도감사」 달성! 🎉";
     speak("도감을 전부 모았어요! 마스터 도감사!");
   } else {
-    $("#reward-rarity").textContent = `${r.star} ${r.label} 동물을 모았어요!`;
+    $("#reward-rarity").innerHTML = `${ico(r.icon, "ico-sm")}${r.label} 동물을 모았어요!`;
     prefetchNextAnimal();
   }
   $("#reward-modal").classList.add("show");
@@ -541,7 +541,7 @@ function openLightbox(a) {
   back.innerHTML = `<div class="modal">
     <img class="reward-img" src="${animalImg(a.id)}" alt="${a.name}" />
     <p class="reward-title">${ico(setOf(a.set).icon, "ico-md")}${a.name}</p>
-    <p class="reward-rarity">${r.star} ${r.label}</p>
+    <p class="reward-rarity">${ico(r.icon, "ico-sm")}${r.label}</p>
     <button class="btn primary big save" style="margin-top:10px;">${ico(EMOJI_ICON.camera, "ico-btn")}그림 저장</button>
     <button class="btn close" style="width:100%; margin-top:10px;">닫기</button>
   </div>`;
@@ -549,8 +549,11 @@ function openLightbox(a) {
     e.stopPropagation(); sTap(); const b = e.currentTarget; b.textContent = "저장 중…";
     saveAnimalCard(a).then(() => b.innerHTML = `${ico(EMOJI_ICON.camera, "ico-btn")}그림 저장`);
   });
-  back.querySelector(".close").addEventListener("click", () => { sTap(); back.remove(); });
-  back.addEventListener("click", e => { if (e.target === back) back.remove(); });
+  const close = () => { sTap(); back.remove(); document.removeEventListener("keydown", onKey); };
+  const onKey = e => { if (e.key === "Escape") close(); };
+  back.querySelector(".close").addEventListener("click", close);
+  back.addEventListener("click", e => { if (e.target === back) close(); });
+  document.addEventListener("keydown", onKey);
   $("#app").appendChild(back);
 }
 async function saveAnimalCard(a) {
@@ -633,8 +636,15 @@ TRACKS.forEach((t, i) => {
   $("#seg-track").appendChild(b);
 });
 $("#reset-all").addEventListener("click", () => {
-  if (confirm("정말 모든 기록과 도감을 초기화할까요?")) { state = defaultState(); save(); renderSettings(); }
+  if (confirm("정말 모든 기록과 도감을 초기화할까요?")) { state = defaultState(); save(); applyVolumes(); restartBGM(); lockParent(); renderSettings(); }
 });
+
+/* 부모 영역 재잠금(설정 탭 진입 때마다) */
+function lockParent() {
+  const lk = $("#parent-locked"), ar = $("#parent-area");
+  if (lk) lk.style.display = "block";
+  if (ar) ar.style.display = "none";
+}
 
 /* 부모 게이트 — 두 자리 덧셈 + 키패드 입력(찍기 불가, 아이 못 풂) */
 let gateAns = 0, gateBuf = "";
