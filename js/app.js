@@ -23,7 +23,7 @@ const defaultState = () => ({
   ops: ["mul"],                     // 선택 연산 종류
   sound: true,
   music: true,                      // 배경 음악
-  musicVol: 0.55,                   // 배경 음악 음량(부드럽게, 효과음보단 작게)
+  musicVol: 0.7,                    // 배경 음악 음량
   sfxVol: 0.9,                      // 효과음 음량
   voice: true,                      // 음성 안내
   difficulty: "normal",
@@ -45,7 +45,7 @@ function load() {
   if (typeof s.voice !== "boolean") s.voice = true;
   if (typeof s.music !== "boolean") s.music = true;
   const clamp01 = (v, d) => (typeof v === "number" && v >= 0 && v <= 1) ? v : d;
-  s.musicVol = clamp01(s.musicVol, 0.55);
+  s.musicVol = clamp01(s.musicVol, 0.7);
   s.sfxVol = clamp01(s.sfxVol, 0.9);
   s.stats = s.stats || {};
   s.stats.perDan = s.stats.perDan || {};
@@ -60,8 +60,11 @@ function ensureCtx() {
   try {
     if (!actx) {
       actx = new (window.AudioContext || window.webkitAudioContext)();
+      const comp = actx.createDynamicsCompressor();   // 마스터 리미터(클리핑 방지)
+      comp.threshold.value = -10; comp.ratio.value = 12; comp.attack.value = .003; comp.release.value = .25;
+      comp.connect(actx.destination);
       musicBus = actx.createGain(); sfxBus = actx.createGain();
-      musicBus.connect(actx.destination); sfxBus.connect(actx.destination);
+      musicBus.connect(comp); sfxBus.connect(comp);
       musicBus.gain.value = state.musicVol; sfxBus.gain.value = state.sfxVol;
     }
     if (actx.state === "suspended") actx.resume();
@@ -111,11 +114,11 @@ function bgmTick() {
   const ahead = actx.currentTime + 0.25;
   while (bgmNext < ahead) {
     const f = BGM_MELODY[bgmStep % BGM_MELODY.length];
-    if (f) note(f, bgmNext, BGM_STEP * 0.85, "triangle", 0.26, musicBus);
+    if (f) note(f, bgmNext, BGM_STEP * 0.85, "triangle", 0.5, musicBus);
     if (bgmStep % 4 === 0) {            // 4스텝마다 베이스 + 옥타브
       const b = BGM_BASS[Math.floor(bgmStep / 4) % BGM_BASS.length];
-      note(b, bgmNext, BGM_STEP * 3.6, "sine", 0.20, musicBus);
-      note(b * 2, bgmNext, BGM_STEP * 3.2, "triangle", 0.09, musicBus);
+      note(b, bgmNext, BGM_STEP * 3.6, "sine", 0.4, musicBus);
+      note(b * 2, bgmNext, BGM_STEP * 3.2, "triangle", 0.18, musicBus);
     }
     bgmStep++; bgmNext += BGM_STEP;
   }
