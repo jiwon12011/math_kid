@@ -157,11 +157,25 @@ function restartBGM() { stopBGM(); if (state.music) startBGM(); }
 
 /* ---------- 음성 안내 (Web Speech API) ---------- */
 let koVoice = null;
+// 한국어 음성 중 품질 좋은 것 우선(향상·프리미엄·유나·Siri·Google 등) — 기기에 깔린 음성이 천장
+function pickKoVoice(vs) {
+  const ko = vs.filter(v => /^ko\b|^ko[-_]|ko-KR/i.test(v.lang));
+  if (!ko.length) return null;
+  const score = v => {
+    const n = (v.name + " " + (v.voiceURI || "")).toLowerCase();
+    let s = 0;
+    if (/premium|enhanced|향상|프리미엄/.test(n)) s += 6;   // 다운로드형 고품질
+    if (/neural|natural|신경/.test(n))           s += 5;
+    if (/yuna|유나|siri/.test(n))                s += 4;   // Apple
+    if (/google/.test(n))                        s += 3;   // 크롬 온라인 한국어
+    if (/nuri|누리|sora|소라|sun-?hi|선희|미연/.test(n)) s += 2;
+    if (v.lang.replace("_", "-").toLowerCase() === "ko-kr") s += 1;
+    return s;
+  };
+  return ko.slice().sort((a, b) => score(b) - score(a))[0];
+}
 function loadVoices() {
-  try {
-    const vs = speechSynthesis.getVoices();
-    koVoice = vs.find(v => v.lang === "ko-KR") || vs.find(v => /ko/i.test(v.lang)) || null;
-  } catch {}
+  try { koVoice = pickKoVoice(speechSynthesis.getVoices()) || koVoice; } catch {}
 }
 if ("speechSynthesis" in window) {
   loadVoices();
@@ -172,7 +186,7 @@ function speak(text) {
   try {
     speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
-    u.lang = "ko-KR"; u.rate = 0.95; u.pitch = 1.1;
+    u.lang = "ko-KR"; u.rate = 0.96; u.pitch = 1.06; u.volume = 1;  // 너무 높은 톤은 더 기계같음 → 자연스럽게 살짝만
     if (koVoice) u.voice = koVoice;
     speechSynthesis.speak(u);
   } catch {}
