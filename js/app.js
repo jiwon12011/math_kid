@@ -186,7 +186,7 @@ function speak(text) {
   try {
     speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
-    u.lang = "ko-KR"; u.rate = 0.96; u.pitch = 1.06; u.volume = 1;  // 너무 높은 톤은 더 기계같음 → 자연스럽게 살짝만
+    u.lang = "ko-KR"; u.rate = 1.0; u.pitch = 1.25; u.volume = 1;  // 아이용 마스코트 느낌 — 살짝 높고 발랄한 톤
     if (koVoice) u.voice = koVoice;
     speechSynthesis.speak(u);
   } catch {}
