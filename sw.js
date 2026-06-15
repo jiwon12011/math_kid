@@ -1,5 +1,5 @@
 // 수리수리 도감 — 오프라인 캐시 (앱 셸 + 에셋)
-const CACHE = "surisuri-v17";
+const CACHE = "surisuri-v18";
 const EMOJI = ["mascot-fox","mascot-fox-happy","mascot-fox-thinking",
   "nav-play-crayon","nav-dex-book","nav-settings-gear",
   "set-farm","set-forest","set-ocean","set-jungle","set-polar",
