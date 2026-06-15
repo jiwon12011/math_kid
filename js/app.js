@@ -372,7 +372,7 @@ function makeQuestion() {
     }
     key = op + a + "x" + b; guard++;
   } while (q && key === q.key && guard < 8);
-  return { op, a, b, answer, key };
+  return { op, a, b, answer, key, scored: false };
 }
 function distractors( q) {
   const ans = q.answer;
@@ -408,20 +408,22 @@ const NUDGE  = ["괜찮아, 다시! 💪", "한 번 더 생각해봐!", "거의 
 let locking = false;
 function answer(btn, val) {
   if (locking) return;
+  if (!q) return;
   const correct = val === q.answer;
-  // 통계
-  state.stats.total++;
+  // 통계 — 그 문제에서 처음 답할 때 1회만(첫 시도 기준), 첫 시도가 정답일 때만 correct
   const op = state.stats.perOp[q.op] = state.stats.perOp[q.op] || { correct: 0, total: 0 };
-  op.total++;
   let dStat = null;
   if (q.op === "mul") {
     const dk = String(q.a);
     dStat = state.stats.perDan[dk] = state.stats.perDan[dk] || { correct: 0, total: 0 };
-    dStat.total++;
+  }
+  if (!q.scored) {
+    q.scored = true;
+    state.stats.total++; op.total++; if (dStat) dStat.total++;
+    if (correct) { state.stats.correct++; op.correct++; if (dStat) dStat.correct++; }
   }
   if (correct) {
     locking = true;
-    state.stats.correct++; op.correct++; if (dStat) dStat.correct++;
     state.stats.streak++; state.stats.bestStreak = Math.max(state.stats.bestStreak, state.stats.streak);
     btn.classList.add("correct"); sCorrect();
     mascotReact("happy"); maybeCombo(state.stats.streak);
@@ -443,6 +445,7 @@ function answer(btn, val) {
   }
 }
 function revealPatch() {
+  if (!state.current) return;
   const done = state.current.revealed;
   const remaining = [];
   for (let i = 0; i < PATCHES_PER_ANIMAL; i++) if (!done.includes(i)) remaining.push(i);
@@ -456,6 +459,7 @@ function revealPatch() {
 }
 function afterCorrect() {
   locking = false;
+  if (!state.current) return;
   if (state.current.revealed.length >= PATCHES_PER_ANIMAL) completeAnimal();
   else nextQuestion();
 }
@@ -757,7 +761,12 @@ TRACKS.forEach((t, i) => {
   $("#seg-track").appendChild(b);
 });
 $("#reset-all").addEventListener("click", () => {
-  if (confirm("정말 모든 기록과 도감을 초기화할까요?")) { state = defaultState(); save(); applyVolumes(); restartBGM(); lockParent(); renderSettings(); }
+  if (confirm("정말 모든 기록과 도감을 초기화할까요?")) {
+    state = defaultState();
+    inQuiz = false; q = null; clearViz();
+    save(); applyVolumes(); restartBGM();
+    showRangeHome(); lockParent(); renderSettings();
+  }
 });
 
 /* 부모 영역 재잠금(설정 탭 진입 때마다) */
@@ -834,7 +843,7 @@ function renderPlayHome() {
   const wb = $("#weak-banner"); wb.innerHTML = "";
   const weakDans = [], weakOps = [];
   for (let d = 2; d <= 9; d++) { const p = state.stats.perDan[d]; if (p && p.total >= 5 && p.correct/p.total < 0.6) weakDans.push(d); }
-  OP_ORDER.forEach(o => { const p = state.stats.perOp[o]; if (p && p.total >= 5 && p.correct/p.total < 0.6) weakOps.push(o); });
+  OP_ORDER.forEach(o => { if (!state.enabledOps.includes(o)) return; const p = state.stats.perOp[o]; if (p && p.total >= 5 && p.correct/p.total < 0.6) weakOps.push(o); });
   if (weakDans.length || weakOps.length) {
     const names = [...weakDans.map(d=>d+"단"), ...weakOps.filter(o=>o!=="mul"||!weakDans.length).map(o=>OPS[o].name)];
     const b = document.createElement("div"); b.className = "banner weak";
