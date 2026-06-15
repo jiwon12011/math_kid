@@ -358,10 +358,7 @@ function startQuiz() {
   nextQuestion();
   if (!greeted) {
     greeted = true;
-    // 인사 우선: 인사 speak가 nextQuestion의 문제 발화를 끊고, pendingQuestion=true로 다시 예약 → 인사 끝나면 현재 문제 읽힘
-    speak("안녕! 나는 여우 꼬미야. 우리 같이 곱셈 해볼까?");
-    pendingQuestion = true;
-    toast("안녕! 나는 여우 꼬미야 🦊");
+    toast("안녕! 👋");   // 인사는 토스트만(음성 없음), 문제 음성은 nextQuestion이 읽음
     if (stampedToday) { const d = state.stampDays; setTimeout(() => toast(`오늘도 왔구나! 🔥 연속 ${d}일 출석!`), 2600); stampedToday = false; }
   } else if (stampedToday) {
     toast(`오늘도 왔구나! 🔥 연속 ${state.stampDays}일 출석!`); stampedToday = false;
@@ -467,12 +464,10 @@ function nextQuestion() {
 
 const PRAISE = ["좋아좋아! ✨", "멋져! 🌟", "잘했어! 🎉", "정답! 👏", "최고야! 💛", "딩동댕! 🔔"];
 const NUDGE  = ["괜찮아, 다시! 💪", "한 번 더 생각해봐!", "거의 다 왔어!", "다시 골라볼까?"];
-// 마스코트 '꼬미' 대사 — 칭찬은 짧게(빠른 피드백)
-const FOX_PRAISE = ["꼬미 최고! 🦊", "꼬미 신나! ✨", "와, 좋아! 🙌"];
-const FOX_COMBO  = ["{n}연속! 멋져! ✨", "연속 정답, 최고야! 🦊"];
-const FOX_DONE   = ["축하해! 🎉", "{name} 완성! 🎉", "다 모았어, 멋져! ✨"];
-const FOX_DONE_SHINY = ["우와 반짝이! 축하해! ✨", "반짝이 친구다! 🌟"];
-const FOX_NUDGE  = ["괜찮아, 꼬미도 가끔 틀려. 다시 해보자!", "천천히 해도 돼, 꼬미가 기다릴게! 🦊"];
+// 짧은 멘트 — 문장 X, 가벼운 한마디만
+const FOX_COMBO  = ["{n}연속! ✨", "연속 정답! 🌟"];
+const FOX_DONE   = ["축하해! 🎉", "{name} 완성! 🎉", "다 모았어! ✨"];
+const FOX_DONE_SHINY = ["반짝이! 축하해! ✨", "반짝이 친구다! 🌟"];
 
 let locking = false;
 function answer(btn, val) {
@@ -500,7 +495,7 @@ function answer(btn, val) {
     state.stats.streak++; state.stats.bestStreak = Math.max(state.stats.bestStreak, state.stats.streak);
     btn.classList.add("correct"); sCorrect();
     mascotReact("happy"); const comboed = maybeCombo(state.stats.streak);
-    const praise = (Math.random() < 0.34 ? FOX_PRAISE[rnd(FOX_PRAISE.length)] : PRAISE[rnd(PRAISE.length)]);
+    const praise = PRAISE[rnd(PRAISE.length)];
     coach(praise, true);
     // 콤보 음성이 나간 경우엔 칭찬 음성이 콤보를 덮지 않도록 생략(텍스트는 유지)
     if (!comboed) speak(praise.replace(/[^가-힣! ]/g, "").trim() || "정답!");
@@ -513,7 +508,7 @@ function answer(btn, val) {
     state.stats.streak = 0;
     btn.classList.add("wrong"); btn.disabled = true; sWrong();
     mascotReact("think");
-    const nudge = (Math.random() < 0.34 ? FOX_NUDGE[rnd(FOX_NUDGE.length)] : NUDGE[rnd(NUDGE.length)]);
+    const nudge = NUDGE[rnd(NUDGE.length)];
     coach(nudge);
     offerHint();        // 힌트 버튼 노출(누르면 showViz로 양감 시각화)
     save();
@@ -555,7 +550,7 @@ function completeAnimal() {
   if (state.collected.length >= ANIMALS.length) {
     $("#reward-name").innerHTML = `${ico(EMOJI_ICON.trophy, "ico-md")}${animal.name}`;
     $("#reward-rarity").textContent = "도감 50종 완성! 「마스터 도감사」 달성! 🎉";
-    speak("도감을 전부 모았어요! 마스터 도감사!");
+    speak("마스터 도감사! 🎉");
   } else {
     $("#reward-rarity").innerHTML = `${ico(r.icon, "ico-sm")}${r.label} 동물을 모았어요!`;
     prefetchNextAnimal();
@@ -836,7 +831,7 @@ $("#sw-music").addEventListener("click", () => { state.music = !state.music; sav
 $("#vol-sfx").addEventListener("input", e => { state.sfxVol = e.target.value / 100; applyVolumes(); save(); });
 $("#vol-sfx").addEventListener("change", () => sCorrect());   // 놓으면 미리듣기
 $("#vol-music").addEventListener("input", e => { state.musicVol = e.target.value / 100; applyVolumes(); save(); if (state.music) startBGM(); });
-$("#sw-voice").addEventListener("click", () => { state.voice = !state.voice; save(); renderSettings(); if (state.voice) speak("음성 안내를 켰어요"); });
+$("#sw-voice").addEventListener("click", () => { state.voice = !state.voice; save(); renderSettings(); if (state.voice) speak("음성 켜짐"); });
 $("#sw-hint").addEventListener("click", () => { state.hints = !state.hints; save(); renderSettings(); if (state.hints) sTap(); });
 // 연산 종류 토글(곱셈 제외) — 끄면 ops에서도 제거, 빈 배열이면 mul 폴백
 function toggleEnabledOp(op) {
