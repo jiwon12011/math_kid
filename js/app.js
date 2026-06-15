@@ -184,12 +184,20 @@ if ("speechSynthesis" in window) {
 // 발화 큐가 절대 안 쌓이게: 항상 cancel 후 최신만 재생. 세대(seq)로 stale onend 무시.
 let speechSeq = 0;          // 발화 세대 — 최신 판별
 let pendingQuestion = false; // 현재 문제를 아직 안 읽음: 진행 중 음성(칭찬/인사)이 끝나면 읽어야 함
+// 이모지/그림문자 제거(TTS가 "파티 폭죽" 식으로 읽는 것 방지). 숫자·물음표 등은 유지.
+function speakable(text) {
+  return String(text)
+    .replace(/[\p{Extended_Pictographic}\u{FE0F}\u{200D}\u{1F3FB}-\u{1F3FF}]/gu, "")
+    .replace(/\s+/g, " ").trim();
+}
 function speak(text) {
   if (!state.voice || !("speechSynthesis" in window)) return;
+  const say = speakable(text);
+  if (!say) return;
   try {
     speechSynthesis.cancel();          // 큐 안 쌓이게 항상 끊고 시작
     const myseq = ++speechSeq;
-    const u = new SpeechSynthesisUtterance(text);
+    const u = new SpeechSynthesisUtterance(say);
     u.lang = "ko-KR"; u.rate = 1.0; u.pitch = 1.25; u.volume = 1;  // 아이용 마스코트 느낌 — 살짝 높고 발랄한 톤
     if (koVoice) u.voice = koVoice;
     u.onend = () => {
@@ -498,7 +506,7 @@ function answer(btn, val) {
     const praise = PRAISE[rnd(PRAISE.length)];
     coach(praise, true);
     // 콤보 음성이 나간 경우엔 칭찬 음성이 콤보를 덮지 않도록 생략(텍스트는 유지)
-    if (!comboed) speak(praise.replace(/[^가-힣! ]/g, "").trim() || "정답!");
+    if (!comboed) speak(praise);   // speak가 이모지 제거
     $$(".choice").forEach(c => c.disabled = true);
     clearViz();
     revealPatch();
