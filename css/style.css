@@ -48,6 +48,8 @@ body {
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
   touch-action: manipulation;
+  word-break: keep-all;        /* 한국어는 어절(단어) 단위로 줄바꿈 — 글자 중간 끊김 방지 */
+  overflow-wrap: break-word;   /* 공백 없는 긴 문자열만 예외적으로 끊기 */
 }
 button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
 img { -webkit-user-drag: none; user-select: none; }
