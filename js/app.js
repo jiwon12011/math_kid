@@ -28,6 +28,7 @@ const defaultState = () => ({
   musicVol: 0.7,                    // 배경 음악 음량
   sfxVol: 0.9,                      // 효과음 음량
   voice: true,                      // 음성 안내
+  hints: true,                      // 오답 시 힌트 그림
   difficulty: "normal",
   hasPlayed: false,                 // 한 번이라도 시작했나(바로 시작용)
   lastVisit: "",                    // 데일리 스탬프
@@ -46,6 +47,7 @@ function load() {
   if (s.current && !Array.isArray(s.current.revealed)) s.current.revealed = [];
   if (typeof s.voice !== "boolean") s.voice = true;
   if (typeof s.music !== "boolean") s.music = true;
+  if (typeof s.hints !== "boolean") s.hints = true;
   const clamp01 = (v, d) => (typeof v === "number" && v >= 0 && v <= 1) ? v : d;
   s.musicVol = clamp01(s.musicVol, 0.7);
   s.sfxVol = clamp01(s.sfxVol, 0.9);
@@ -413,7 +415,7 @@ function answer(btn, val) {
     mascotReact("think");
     const nudge = NUDGE[rnd(NUDGE.length)];
     coach(nudge);
-    showViz();          // 양감 시각화(speak은 showViz가 캡션을 읽어줌)
+    offerHint();        // 힌트 버튼 노출(누르면 showViz로 양감 시각화)
     save();
   }
 }
@@ -472,11 +474,20 @@ $("#reward-dex").addEventListener("click", () => {
 function coach(msg, good=false) { const c = $("#coach"); c.textContent = msg; c.classList.toggle("good", good); }
 
 /* 오답 시 양감(量感) 시각화 — 정답 숫자는 숨기고 묶음을 세게 한다 */
-let vizKey = null;   // 현재 그려둔 문제 key(같은 문제면 다시 안 그림)
 function clearViz() {
   const v = $("#viz");
   if (v) { v.innerHTML = ""; v.removeAttribute("aria-label"); }
-  vizKey = null;
+}
+// 오답 시 힌트 버튼만 띄운다(자동 표시 X). 누르면 showViz로 묶음 점을 그린다.
+function offerHint() {
+  if (!state.hints || !q) return;
+  const v = $("#viz"); if (!v || v.children.length) return;  // 이미 버튼/그림 있으면 중복 방지
+  const btn = document.createElement("button");
+  btn.className = "hint-btn";
+  btn.textContent = "🍎 힌트 볼래?";
+  btn.setAttribute("aria-label", "힌트 보기");
+  btn.addEventListener("click", () => { sTap(); showViz(); });
+  v.appendChild(btn);
 }
 // n개의 점을 담은 상자(bundle=묶음 격자, dotCls=점 색 구분)
 function vizBox(n, bundle = false, dotCls = "") {
@@ -494,10 +505,8 @@ function vizDot(cls = "", i = 0) {
 }
 function showViz() {
   const v = $("#viz"); if (!v || !q) return;
-  if (vizKey === q.key) return;            // 같은 문제 → 중복 방지
-  vizKey = q.key;
   v.classList.toggle("no-anim", reduceMotion);
-  v.innerHTML = "";
+  v.innerHTML = "";                        // 힌트 버튼 제거 후 점을 그린다
   const { op, a, b } = q;
   const cap = document.createElement("div"); cap.className = "viz-cap";
   const bins = document.createElement("div"); bins.className = "viz-bins";
@@ -653,6 +662,7 @@ function renderSettings() {
   $("#sw-sound").setAttribute("aria-checked", state.sound);
   $("#sw-music").setAttribute("aria-checked", state.music);
   $("#sw-voice").setAttribute("aria-checked", state.voice);
+  $("#sw-hint").setAttribute("aria-checked", state.hints);
   $("#vol-sfx").value = Math.round(state.sfxVol * 100);
   $("#vol-music").value = Math.round(state.musicVol * 100);
   $$("#seg-track button").forEach(b => b.setAttribute("aria-pressed", +b.dataset.i === state.musicTrack));
@@ -697,6 +707,7 @@ $("#vol-sfx").addEventListener("input", e => { state.sfxVol = e.target.value / 1
 $("#vol-sfx").addEventListener("change", () => sCorrect());   // 놓으면 미리듣기
 $("#vol-music").addEventListener("input", e => { state.musicVol = e.target.value / 100; applyVolumes(); save(); if (state.music) startBGM(); });
 $("#sw-voice").addEventListener("click", () => { state.voice = !state.voice; save(); renderSettings(); if (state.voice) speak("음성 안내를 켰어요"); });
+$("#sw-hint").addEventListener("click", () => { state.hints = !state.hints; save(); renderSettings(); if (state.hints) sTap(); });
 $$("#seg-diff button").forEach(b => b.addEventListener("click", () => { sTap(); state.difficulty = b.dataset.d; save(); renderSettings(); }));
 // 음악 곡 선택 버튼 생성
 TRACKS.forEach((t, i) => {

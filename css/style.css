@@ -311,6 +311,20 @@ img { -webkit-user-drag: none; user-select: none; }
 }
 .viz:empty { display: none; }
 .viz.no-anim, .viz.no-anim * { animation: none !important; }
+/* 힌트 버튼만 있을 때는 카드를 가볍게(점 그림이 뜨면 원래 카드로) */
+.viz:has(.hint-btn) {
+  background: transparent; border: none; box-shadow: none; padding: 4px 0;
+}
+.hint-btn {
+  display: block; margin: 0 auto;
+  font-family: var(--font-hand); font-size: 20px;
+  padding: 10px 22px; border-radius: 999px;
+  background: var(--gold); color: var(--ink);
+  border: none; box-shadow: var(--shadow-sm);
+  min-height: 44px; cursor: pointer;
+  transition: transform .08s ease;
+}
+.hint-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(74,59,42,.12); }
 .viz-cap {
   font-family: var(--font-hand);
   font-size: 21px; color: var(--ink);
