@@ -20,6 +20,7 @@ export const EMOJI_ICON = {
   fox:       "assets/img/emoji/mascot-fox.webp",
   foxHappy:  "assets/img/emoji/mascot-fox-happy.webp",
   foxThink:  "assets/img/emoji/mascot-fox-thinking.webp",
+  star:      "assets/img/emoji/rarity-common-star.webp",
 };
 
 export const ANIMALS = [

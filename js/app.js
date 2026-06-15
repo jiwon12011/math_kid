@@ -930,7 +930,7 @@ function renderPlayHome() {
   for (let i = 0; i < 7; i++) {
     const on = state.stampDays > 0 && i <= pos;
     const today = stampedToday && i === pos;
-    html += `<div class="stamp ${on?"on":""} ${today?"today":""}">${on?"⭐":i+1}</div>`;
+    html += `<div class="stamp ${on?"on":""} ${today?"today":""}">${on ? ico(EMOJI_ICON.star, "stamp-star") : i+1}</div>`;
   }
   strip.innerHTML = html;
 
