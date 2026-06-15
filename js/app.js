@@ -242,7 +242,7 @@ for (let d = 2; d <= 9; d++) {
   const c = document.createElement("button");
   c.className = "dan-card"; c.dataset.dan = d;
   c.setAttribute("aria-pressed", state.dans.includes(d));
-  c.innerHTML = `<span class="n">${d}단</span><span class="x">${d}×1 … ${d}×9</span>`;
+  c.innerHTML = `<span class="n">${d}단</span><span class="x">×1~9</span>`;
   c.addEventListener("click", () => {
     if (state.lockDans) return;
     const on = c.getAttribute("aria-pressed") === "true";
@@ -265,7 +265,11 @@ function syncDanGrid() {
   if (pa) pa.disabled = state.lockDans;
   if (pc) pc.disabled = state.lockDans;
   const lbl = $("#dan-section .label");
-  if (lbl) lbl.textContent = state.lockDans ? "🔒 부모가 정한 단이에요" : "✖️ 곱셈은 몇 단으로 놀까?";
+  if (lbl) {
+    if (state.lockDans) { lbl.textContent = "🔒 부모가 정한 단이에요"; lbl.style.display = ""; }
+    else if (state.enabledOps.length >= 2) { lbl.textContent = "✖️ 곱셈은 몇 단으로 놀까?"; lbl.style.display = ""; }
+    else { lbl.textContent = ""; lbl.style.display = "none"; }
+  }
 }
 
 renderOpGrid();
