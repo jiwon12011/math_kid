@@ -8,6 +8,7 @@
 <meta name="theme-color" content="#f6c544" />
 <link rel="manifest" href="manifest.webmanifest" />
 <link rel="apple-touch-icon" href="assets/img/ui/icon-magic-wand.webp" />
+<link rel="preload" href="assets/fonts/himelody-latin.woff2" as="font" type="font/woff2" crossorigin />
 <link rel="preload" href="assets/fonts/himelody-korean.woff2" as="font" type="font/woff2" crossorigin />
 <link rel="preload" href="assets/fonts/jua-korean.woff2" as="font" type="font/woff2" crossorigin />
 <link rel="stylesheet" href="css/style.css" />
@@ -104,27 +105,27 @@
         <button class="switch" id="sw-sound" role="switch" aria-checked="true" aria-label="소리 켜기끄기"></button>
       </div>
       <div class="setting-row">
-        <span class="ic" style="font-size:26px; text-align:center;">🎵</span>
+        <span class="ic">🎵</span>
         <span class="lab">배경 음악</span>
         <button class="switch" id="sw-music" role="switch" aria-checked="true" aria-label="배경 음악 켜기끄기"></button>
       </div>
       <div class="setting-row">
-        <span class="ic" style="font-size:26px; text-align:center;">🗣️</span>
+        <span class="ic">🗣️</span>
         <span class="lab">음성 안내</span>
         <button class="switch" id="sw-voice" role="switch" aria-checked="true" aria-label="음성 안내 켜기끄기"></button>
       </div>
       <div class="setting-row slider-row">
-        <span class="ic" style="font-size:24px; text-align:center;">🔉</span>
+        <span class="ic">🔉</span>
         <span class="lab">효과음 음량</span>
         <input type="range" class="vol" id="vol-sfx" min="0" max="100" step="5" aria-label="효과음 음량" />
       </div>
       <div class="setting-row slider-row">
-        <span class="ic" style="font-size:24px; text-align:center;">🎚️</span>
+        <span class="ic">🎚️</span>
         <span class="lab">음악 음량</span>
         <input type="range" class="vol" id="vol-music" min="0" max="100" step="5" aria-label="배경 음악 음량" />
       </div>
       <div class="setting-row">
-        <span class="ic" style="font-size:24px; text-align:center;">🎼</span>
+        <span class="ic">🎼</span>
         <span class="lab">음악 곡</span>
         <div class="seg" id="seg-track"></div>
       </div>
