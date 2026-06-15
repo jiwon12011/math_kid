@@ -418,6 +418,11 @@ img { -webkit-user-drag: none; user-select: none; }
 .setting-row .lab { font-size: 20px; }
 .setting-row .lock { margin-left: auto; font-size: 14px; color: var(--ink-soft); }
 .setting-row.locked { opacity: .8; }
+.safe-note {
+  font-size: 14px; color: var(--ink-soft); background: var(--cream);
+  border: 2px dashed rgba(74,59,42,.18); border-radius: 12px;
+  padding: 10px 12px; margin: 0 2px 14px; line-height: 1.4;
+}
 /* 토글 */
 .switch { margin-left: auto; width: 64px; height: 36px; border-radius: 999px; background: #e4d6bf; position: relative; transition: background .2s; flex: none; }
 .switch[aria-checked="true"] { background: var(--good); }
