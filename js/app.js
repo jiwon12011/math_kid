@@ -181,19 +181,20 @@ if ("speechSynthesis" in window) {
   loadVoices();
   speechSynthesis.onvoiceschanged = loadVoices;
 }
-function speak(text) {
+// interrupt=true면 진행 중 음성을 끊고 즉시(다시듣기용), 기본은 이어서 재생(칭찬→다음문제 안 끊기게)
+function speak(text, interrupt = false) {
   if (!state.voice || !("speechSynthesis" in window)) return;
   try {
-    speechSynthesis.cancel();
+    if (interrupt) speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
     u.lang = "ko-KR"; u.rate = 1.0; u.pitch = 1.25; u.volume = 1;  // 아이용 마스코트 느낌 — 살짝 높고 발랄한 톤
     if (koVoice) u.voice = koVoice;
     speechSynthesis.speak(u);
   } catch {}
 }
-function speakQuestion() {
+function speakQuestion(interrupt = false) {
   if (!q) return;
-  speak(`${q.a} ${OPS[q.op].word} ${q.b}는?`);
+  speak(`${q.a} ${OPS[q.op].word} ${q.b}는?`, interrupt);
 }
 // iOS: 첫 사용자 제스처에서 오디오/음성 잠금 해제(이후 setTimeout 경로도 소리남)
 function unlockAudio() {
@@ -205,6 +206,7 @@ window.addEventListener("pointerdown", unlockAudio, { once: true });
 
 /* ---------- 네비게이션 ---------- */
 function showView(v) {
+  try { if ("speechSynthesis" in window) speechSynthesis.cancel(); } catch {}   // 화면 바꾸면 남은 음성 끊기
   $$(".view").forEach(el => el.classList.toggle("active", el.id === "view-" + v));
   $$(".nav button").forEach(b => b.setAttribute("aria-current", b.dataset.view === v ? "page" : "false"));
   if (v === "play") enterPlay();
@@ -356,7 +358,7 @@ function startQuiz() {
 }
 function exitQuiz() { clearViz(); showRangeHome(); }
 $("#quiz-back").addEventListener("click", () => { sTap(); exitQuiz(); });
-$("#q-speak").addEventListener("click", () => speakQuestion());
+$("#q-speak").addEventListener("click", () => speakQuestion(true));   // 다시듣기 — 즉시 끊고 재생
 
 /* 색칠판 만들기 — 흑백 base 위에 컬러 레이어, 정답마다 부드러운 둥근 마스크가 번짐 */
 let currentCells = [];
