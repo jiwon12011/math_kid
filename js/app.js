@@ -21,6 +21,7 @@ const defaultState = () => ({
   collected: [],                    // 완성한 동물 id
   current: null,                    // { animalId, revealed: [idx...] }
   dans: [2, 3, 4, 5],               // 곱셈 선택 단
+  lockDans: false,                  // 부모가 단 고정(아이 못 바꿈)
   ops: ["mul"],                     // 선택 연산 종류
   enabledOps: ["mul"],              // 부모가 켠 연산(곱셈 항상 포함)
   sound: true,
@@ -34,7 +35,7 @@ const defaultState = () => ({
   hasPlayed: false,                 // 한 번이라도 시작했나(바로 시작용)
   lastVisit: "",                    // 데일리 스탬프
   stampDays: 0,
-  stats: { correct: 0, total: 0, streak: 0, bestStreak: 0, perDan: {}, perOp: {} },
+  stats: { correct: 0, total: 0, streak: 0, bestStreak: 0, perDan: {}, perOp: {}, today: { date: "", count: 0 } },
 });
 let state = load();
 function load() {
@@ -58,9 +59,11 @@ function load() {
   s.musicVol = clamp01(s.musicVol, 0.7);
   s.sfxVol = clamp01(s.sfxVol, 0.9);
   if (!(Number.isInteger(s.musicTrack) && s.musicTrack >= 0)) s.musicTrack = 0;
+  if (typeof s.lockDans !== "boolean") s.lockDans = false;
   s.stats = s.stats || {};
   s.stats.perDan = s.stats.perDan || {};
   s.stats.perOp = s.stats.perOp || {};
+  s.stats.today = s.stats.today || { date: "", count: 0 };
   return s;
 }
 function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {} }
@@ -241,6 +244,7 @@ for (let d = 2; d <= 9; d++) {
   c.setAttribute("aria-pressed", state.dans.includes(d));
   c.innerHTML = `<span class="n">${d}단</span><span class="x">${d}×1 … ${d}×9</span>`;
   c.addEventListener("click", () => {
+    if (state.lockDans) return;
     const on = c.getAttribute("aria-pressed") === "true";
     c.setAttribute("aria-pressed", !on);
     state.dans = $$(".dan-card", danGrid).filter(x => x.getAttribute("aria-pressed") === "true").map(x => +x.dataset.dan);
@@ -248,8 +252,21 @@ for (let d = 2; d <= 9; d++) {
   });
   danGrid.appendChild(c);
 }
-$("#pick-all").addEventListener("click", () => { sTap(); $$(".dan-card").forEach(c => c.setAttribute("aria-pressed", "true")); state.dans = [2,3,4,5,6,7,8,9]; save(); });
-$("#pick-clear").addEventListener("click", () => { sTap(); $$(".dan-card").forEach(c => c.setAttribute("aria-pressed", "false")); state.dans = []; save(); });
+$("#pick-all").addEventListener("click", () => { if (state.lockDans) return; sTap(); $$(".dan-card").forEach(c => c.setAttribute("aria-pressed", "true")); state.dans = [2,3,4,5,6,7,8,9]; save(); });
+$("#pick-clear").addEventListener("click", () => { if (state.lockDans) return; sTap(); $$(".dan-card").forEach(c => c.setAttribute("aria-pressed", "false")); state.dans = []; save(); });
+
+// 놀기 화면 단 카드에 lockDans·선택 상태 반영
+function syncDanGrid() {
+  $$(".dan-card", danGrid).forEach(c => {
+    c.setAttribute("aria-pressed", state.dans.includes(+c.dataset.dan));
+    c.disabled = state.lockDans;
+  });
+  const pa = $("#pick-all"), pc = $("#pick-clear");
+  if (pa) pa.disabled = state.lockDans;
+  if (pc) pc.disabled = state.lockDans;
+  const lbl = $("#dan-section .label");
+  if (lbl) lbl.textContent = state.lockDans ? "🔒 부모가 정한 단이에요" : "✖️ 곱셈은 몇 단으로 놀까?";
+}
 
 renderOpGrid();
 
@@ -294,6 +311,7 @@ function showRangeHome() {
 
 let inQuiz = false;
 let bonusPending = 0;
+let greeted = false;   // 세션 첫 인사(꼬미) 1회
 function startQuiz() {
   inQuiz = true; state.hasPlayed = true;
   $("#play-range").style.display = "none";
@@ -308,7 +326,15 @@ function startQuiz() {
   }
   save();
   nextQuestion();
-  if (stampedToday) { toast(`오늘도 왔구나! 🔥 연속 ${state.stampDays}일 출석!`); stampedToday = false; }
+  if (!greeted) {
+    greeted = true;
+    // 인사 우선: nextQuestion의 문제 음성 뒤에 인사 음성이 이김
+    speak("안녕! 나는 여우 꼬미야. 우리 같이 곱셈 해볼까?");
+    toast("안녕! 나는 여우 꼬미야 🦊");
+    if (stampedToday) { const d = state.stampDays; setTimeout(() => toast(`오늘도 왔구나! 🔥 연속 ${d}일 출석!`), 2600); stampedToday = false; }
+  } else if (stampedToday) {
+    toast(`오늘도 왔구나! 🔥 연속 ${state.stampDays}일 출석!`); stampedToday = false;
+  }
 }
 function exitQuiz() { clearViz(); showRangeHome(); }
 $("#quiz-back").addEventListener("click", () => { sTap(); exitQuiz(); });
@@ -404,6 +430,12 @@ function nextQuestion() {
 
 const PRAISE = ["수리수리! ✨", "잘했어! 🎉", "정답이야! 👏", "멋져! 🌟", "좋아 좋아!"];
 const NUDGE  = ["괜찮아, 다시! 💪", "한 번 더 생각해봐!", "거의 다 왔어!", "다시 골라볼까?"];
+// 마스코트 '꼬미' 대사 — 기존 문구에 가끔 섞어 등장
+const FOX_PRAISE = ["꼬미도 신났어! 🦊", "우와, 꼬미가 깜짝 놀랐어! ✨", "꼬미랑 하이파이브! 🙌", "꼬미가 박수 짝짝! 👏"];
+const FOX_COMBO  = ["{n}연속이라니! 꼬미 꼬리가 살랑살랑! 🦊", "멈추지 않네! 꼬미도 신나서 폴짝! ✨"];
+const FOX_DONE   = ["{name} 완성! 꼬미가 같이 기뻐할게! 🎉", "우와, {name}를 모았어! 꼬미도 자랑스러워! ✨", "{name} 도감에 쏙! 꼬미랑 또 모으자! 🦊"];
+const FOX_DONE_SHINY = ["우와! 반짝이 친구야! 꼬미 눈이 반짝반짝! ✨", "엄청 귀한 친구다! 꼬미도 처음 봐! 🌟"];
+const FOX_NUDGE  = ["괜찮아, 꼬미도 가끔 틀려. 다시 해보자!", "천천히 해도 돼, 꼬미가 기다릴게! 🦊"];
 
 let locking = false;
 function answer(btn, val) {
@@ -421,14 +453,20 @@ function answer(btn, val) {
     q.scored = true;
     state.stats.total++; op.total++; if (dStat) dStat.total++;
     if (correct) { state.stats.correct++; op.correct++; if (dStat) dStat.correct++; }
+    // 오늘 푼 문제 수(정답·오답 무관, 첫 시도 1회만)
+    const tk = dateKey(new Date());
+    if (state.stats.today.date !== tk) state.stats.today = { date: tk, count: 0 };
+    state.stats.today.count++;
   }
   if (correct) {
     locking = true;
     state.stats.streak++; state.stats.bestStreak = Math.max(state.stats.bestStreak, state.stats.streak);
     btn.classList.add("correct"); sCorrect();
-    mascotReact("happy"); maybeCombo(state.stats.streak);
-    const praise = PRAISE[rnd(PRAISE.length)];
-    coach(praise, true); speak(praise.replace(/[^가-힣! ]/g, "").trim() || "정답!");
+    mascotReact("happy"); const comboed = maybeCombo(state.stats.streak);
+    const praise = (Math.random() < 0.34 ? FOX_PRAISE[rnd(FOX_PRAISE.length)] : PRAISE[rnd(PRAISE.length)]);
+    coach(praise, true);
+    // 콤보 음성이 나간 경우엔 칭찬 음성이 콤보를 덮지 않도록 생략(텍스트는 유지)
+    if (!comboed) speak(praise.replace(/[^가-힣! ]/g, "").trim() || "정답!");
     $$(".choice").forEach(c => c.disabled = true);
     clearViz();
     revealPatch();
@@ -438,7 +476,7 @@ function answer(btn, val) {
     state.stats.streak = 0;
     btn.classList.add("wrong"); btn.disabled = true; sWrong();
     mascotReact("think");
-    const nudge = NUDGE[rnd(NUDGE.length)];
+    const nudge = (Math.random() < 0.34 ? FOX_NUDGE[rnd(FOX_NUDGE.length)] : NUDGE[rnd(NUDGE.length)]);
     coach(nudge);
     offerHint();        // 힌트 버튼 노출(누르면 showViz로 양감 시각화)
     save();
@@ -466,10 +504,14 @@ function afterCorrect() {
 
 function completeAnimal() {
   const animal = ANIMALS.find(a => a.id === state.current.animalId);
+  const shiny = animal.rarity === "shiny";
   if (!state.collected.includes(animal.id)) state.collected.push(animal.id);
   state.current = null; save();
-  sComplete(); burst();
-  speak(`마수리 완성! ${animal.name}를 모았어요!`);
+  sComplete();
+  if (shiny && !reduceMotion) tone(1567.98, 0.5, 0.4, "triangle", 0.10); // 골드 한 음
+  burst(shiny);
+  const doneLine = (shiny ? FOX_DONE_SHINY[rnd(FOX_DONE_SHINY.length)] : FOX_DONE[rnd(FOX_DONE.length)]).replace("{name}", animal.name);
+  speak(doneLine);
   $("#reward-img").src = animalImg(animal.id);
   $("#reward-name").innerHTML = `${ico(setOf(animal.set).icon, "ico-md")}${animal.name}`;
   const r = RARITY[animal.rarity];
@@ -481,7 +523,11 @@ function completeAnimal() {
     $("#reward-rarity").innerHTML = `${ico(r.icon, "ico-sm")}${r.label} 동물을 모았어요!`;
     prefetchNextAnimal();
   }
-  $("#reward-modal").classList.add("show");
+  const back = $("#reward-modal"); const card = back.querySelector(".modal");
+  back.classList.toggle("shiny", shiny && !reduceMotion);
+  card.classList.toggle("shiny", shiny && !reduceMotion);
+  card.classList.toggle("shiny-static", shiny && reduceMotion);
+  back.classList.add("show");
 }
 function prefetchNextAnimal() {
   const next = ANIMALS.find(a => !state.collected.includes(a.id));
@@ -490,12 +536,17 @@ function prefetchNextAnimal() {
   l.rel = "prefetch"; l.as = "image"; l.href = animalImg(next.id);
   document.head.appendChild(l);
 }
+function closeReward() {
+  const back = $("#reward-modal");
+  back.classList.remove("show", "shiny");
+  back.querySelector(".modal").classList.remove("shiny", "shiny-static");
+}
 $("#reward-next").addEventListener("click", () => {
-  sTap(); $("#reward-modal").classList.remove("show");
+  sTap(); closeReward();
   const a = pickAnimal(); buildCanvas(a); nextQuestion();
 });
 $("#reward-dex").addEventListener("click", () => {
-  sTap(); $("#reward-modal").classList.remove("show"); exitQuiz(); showView("dex");
+  sTap(); closeReward(); exitQuiz(); showView("dex");
 });
 
 function coach(msg, good=false) { const c = $("#coach"); c.textContent = msg; c.classList.toggle("good", good); }
@@ -579,19 +630,24 @@ function magicPop(cell) {
     wrap.appendChild(s); setTimeout(() => s.remove(), 850);
   }
 }
-function burst() {
+function burst(shiny = false) {
   if (reduceMotion) return;
   const host = $("#reward-modal");
-  for (let i = 0; i < 24; i++) {
+  const n = shiny ? 32 : 24;
+  const chars = shiny ? ["⭐","🌟","✨","💛"] : ["✨","🎉","⭐","🌈","💛"];
+  const base = shiny ? 20 : 14;
+  const spread = shiny ? 280 : 200;
+  const life = shiny ? 1800 : 1500;
+  for (let i = 0; i < n; i++) {
     const s = document.createElement("div");
-    s.className = "spark"; s.textContent = ["✨","🎉","⭐","🌈","💛"][rnd(5)];
+    s.className = "spark"; s.textContent = chars[rnd(chars.length)];
     s.style.left = (40 + Math.random()*20) + "%"; s.style.top = "40%";
-    s.style.fontSize = (14 + Math.random()*16) + "px";
+    s.style.fontSize = (base + Math.random()*16) + "px";
     s.style.setProperty("--dx", (Math.random()*2-1));
     s.style.animation = `floatUp ${.8+Math.random()*.6}s ease forwards`;
-    s.style.transform = `translateX(${(Math.random()*200-100)}px)`;
+    s.style.transform = `translateX(${(Math.random()*spread - spread/2)}px)`;
     host.appendChild(s);
-    setTimeout(() => s.remove(), 1500);
+    setTimeout(() => s.remove(), life);
   }
 }
 
@@ -685,6 +741,7 @@ async function saveAnimalCard(a) {
 }
 
 /* ---------- 설정 ---------- */
+function barColor(pct){ return pct < 60 ? "var(--oops)" : pct < 85 ? "var(--gold)" : "var(--good)"; }
 function renderSettings() {
   $("#sw-sound").setAttribute("aria-checked", state.sound);
   $("#sw-music").setAttribute("aria-checked", state.music);
@@ -702,6 +759,12 @@ function renderSettings() {
   $("#st-acc").textContent = (s.total ? Math.round(s.correct / s.total * 100) : 0) + "%";
   $("#st-dex").textContent = state.collected.length;
   $("#st-streak").textContent = s.bestStreak;
+  const tk = dateKey(new Date());
+  $("#st-today").textContent = s.today.date === tk ? s.today.count : 0;
+  // 단 고정(부모)
+  $("#sw-lock-dans").setAttribute("aria-checked", state.lockDans);
+  $("#dan-lock-row").style.display = state.lockDans ? "flex" : "none";
+  renderDanLockPick();
   const ds = $("#dan-stats"); ds.innerHTML = "";
   // 연산별 정답률 (해본 것만)
   const usedOps = OP_ORDER.filter(o => (s.perOp[o] || {}).total);
@@ -712,7 +775,7 @@ function renderSettings() {
       const row = document.createElement("div");
       row.style.cssText = "display:flex;align-items:center;gap:10px;margin:6px 2px;font-size:16px;";
       row.innerHTML = `<span style="width:64px;font-family:var(--font-hand)">${OPS[o].emoji} ${OPS[o].name}</span>
-        <div class="set-bar" style="flex:1;margin:0"><i style="width:${pct}%"></i></div>
+        <div class="set-bar" style="flex:1;margin:0"><i style="width:${pct}%; background:${barColor(pct)}"></i></div>
         <span style="width:54px;text-align:right;color:var(--ink-soft)">${pct}%</span>`;
       opWrap.appendChild(row);
     });
@@ -726,7 +789,7 @@ function renderSettings() {
     const row = document.createElement("div");
     row.style.cssText = "display:flex;align-items:center;gap:10px;margin:6px 2px;font-size:16px;";
     row.innerHTML = `<span style="width:34px;font-family:var(--font-hand)">${d}단</span>
-      <div class="set-bar" style="flex:1;margin:0"><i style="width:${pct}%"></i></div>
+      <div class="set-bar" style="flex:1;margin:0"><i style="width:${pct}%${pd.total?`; background:${barColor(pct)}`:""}"></i></div>
       <span style="width:54px;text-align:right;color:var(--ink-soft)">${pd.total?pct+"%":"-"}</span>`;
     ds.appendChild(row);
   }
@@ -750,6 +813,33 @@ function toggleEnabledOp(op) {
   }
   save(); renderSettings();
 }
+// 단 고정(부모): 고정할 단 선택 버튼 2~9 (재)생성
+function renderDanLockPick() {
+  const wrap = $("#dan-lock-pick"); if (!wrap) return;
+  wrap.innerHTML = "";
+  for (let d = 2; d <= 9; d++) {
+    const b = document.createElement("button");
+    b.dataset.d = d; b.textContent = d + "단";
+    b.setAttribute("aria-pressed", state.dans.includes(d));
+    b.addEventListener("click", () => {
+      sTap();
+      const on = state.dans.includes(d);
+      if (on) {
+        if (state.dans.length === 1) return;   // 마지막 1단은 못 뺌
+        state.dans = state.dans.filter(x => x !== d);
+      } else {
+        state.dans = [...state.dans, d].sort((x, y) => x - y);
+      }
+      save(); renderSettings(); syncDanGrid();
+    });
+    wrap.appendChild(b);
+  }
+}
+$("#sw-lock-dans").addEventListener("click", () => {
+  state.lockDans = !state.lockDans;
+  if (state.lockDans && !state.dans.length) state.dans = [2,3,4,5];   // 빈 상태로 고정하면 아이가 못 고르니 기본 단 채움
+  sTap(); save(); renderSettings(); syncDanGrid();
+});
 $("#sw-op-add").addEventListener("click", () => toggleEnabledOp("add"));
 $("#sw-op-sub").addEventListener("click", () => toggleEnabledOp("sub"));
 $("#sw-op-div").addEventListener("click", () => toggleEnabledOp("div"));
@@ -828,6 +918,7 @@ function checkDailyStamp() {
 /* ---------- 놀기 홈 렌더(스탬프·약점·이어하기) ---------- */
 function renderPlayHome() {
   renderOpGrid();   // 부모가 연산을 켜고 돌아오면 반영
+  syncDanGrid();    // 부모가 정한 단 고정/선택 반영
   // 스탬프 7칸
   const strip = $("#stamp-strip");
   const pos = ((state.stampDays - 1) % 7 + 7) % 7;  // 0~6, 오늘 위치
@@ -881,11 +972,13 @@ function toast(msg) {
 
 /* ---------- 콤보 배너 ---------- */
 function maybeCombo(streak) {
-  if (!(streak === 3 || streak === 5 || (streak >= 10 && streak % 5 === 0))) return;
+  if (!(streak === 3 || streak === 5 || (streak >= 10 && streak % 5 === 0))) return false;
   const el = $("#combo-banner");
   el.textContent = `${streak}연속! 수리수리 콤보! ✨`;
   el.classList.remove("show"); void el.offsetWidth; el.classList.add("show");
   [784, 988, 1318].forEach((f,i) => tone(f, i*.07, .25, "triangle", .18));
+  speak(FOX_COMBO[rnd(FOX_COMBO.length)].replace("{n}", streak)); // 꼬미 콤보 한마디
+  return true;
 }
 
 /* ---------- 마스코트 리액션 ---------- */
