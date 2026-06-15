@@ -181,20 +181,29 @@ if ("speechSynthesis" in window) {
   loadVoices();
   speechSynthesis.onvoiceschanged = loadVoices;
 }
-// interrupt=true면 진행 중 음성을 끊고 즉시(다시듣기용), 기본은 이어서 재생(칭찬→다음문제 안 끊기게)
-function speak(text, interrupt = false) {
+// 발화 큐가 절대 안 쌓이게: 항상 cancel 후 최신만 재생. 세대(seq)로 stale onend 무시.
+let speechSeq = 0;          // 발화 세대 — 최신 판별
+let pendingQuestion = false; // 현재 문제를 아직 안 읽음: 진행 중 음성(칭찬/인사)이 끝나면 읽어야 함
+function speak(text) {
   if (!state.voice || !("speechSynthesis" in window)) return;
   try {
-    if (interrupt) speechSynthesis.cancel();
+    speechSynthesis.cancel();          // 큐 안 쌓이게 항상 끊고 시작
+    const myseq = ++speechSeq;
     const u = new SpeechSynthesisUtterance(text);
     u.lang = "ko-KR"; u.rate = 1.0; u.pitch = 1.25; u.volume = 1;  // 아이용 마스코트 느낌 — 살짝 높고 발랄한 톤
     if (koVoice) u.voice = koVoice;
+    u.onend = () => {
+      if (myseq !== speechSeq) return;  // 더 새 발화가 생김 → 무시(stale 방지)
+      if (pendingQuestion) { pendingQuestion = false; narrateQuestion(); }
+    };
     speechSynthesis.speak(u);
   } catch {}
 }
-function speakQuestion(interrupt = false) {
+// 현재(최신) 화면의 문제를 읽음. speak가 cancel+새 seq라 재귀 문제 없음.
+function narrateQuestion() {
   if (!q) return;
-  speak(`${q.a} ${OPS[q.op].word} ${q.b}는?`, interrupt);
+  pendingQuestion = false;
+  speak(`${q.a} ${OPS[q.op].word} ${q.b}는?`);
 }
 // iOS: 첫 사용자 제스처에서 오디오/음성 잠금 해제(이후 setTimeout 경로도 소리남)
 function unlockAudio() {
@@ -207,6 +216,7 @@ window.addEventListener("pointerdown", unlockAudio, { once: true });
 /* ---------- 네비게이션 ---------- */
 function showView(v) {
   try { if ("speechSynthesis" in window) speechSynthesis.cancel(); } catch {}   // 화면 바꾸면 남은 음성 끊기
+  pendingQuestion = false;   // 대기 중 문제 발화도 정리(stale 방지)
   $$(".view").forEach(el => el.classList.toggle("active", el.id === "view-" + v));
   $$(".nav button").forEach(b => b.setAttribute("aria-current", b.dataset.view === v ? "page" : "false"));
   if (v === "play") enterPlay();
@@ -348,17 +358,22 @@ function startQuiz() {
   nextQuestion();
   if (!greeted) {
     greeted = true;
-    // 인사 우선: nextQuestion의 문제 음성 뒤에 인사 음성이 이김
+    // 인사 우선: 인사 speak가 nextQuestion의 문제 발화를 끊고, pendingQuestion=true로 다시 예약 → 인사 끝나면 현재 문제 읽힘
     speak("안녕! 나는 여우 꼬미야. 우리 같이 곱셈 해볼까?");
+    pendingQuestion = true;
     toast("안녕! 나는 여우 꼬미야 🦊");
     if (stampedToday) { const d = state.stampDays; setTimeout(() => toast(`오늘도 왔구나! 🔥 연속 ${d}일 출석!`), 2600); stampedToday = false; }
   } else if (stampedToday) {
     toast(`오늘도 왔구나! 🔥 연속 ${state.stampDays}일 출석!`); stampedToday = false;
   }
 }
-function exitQuiz() { clearViz(); showRangeHome(); }
+function exitQuiz() {
+  try { if ("speechSynthesis" in window) speechSynthesis.cancel(); } catch {}  // 떠나면 음성 끊기
+  pendingQuestion = false;
+  clearViz(); showRangeHome();
+}
 $("#quiz-back").addEventListener("click", () => { sTap(); exitQuiz(); });
-$("#q-speak").addEventListener("click", () => speakQuestion(true));   // 다시듣기 — 즉시 끊고 재생
+$("#q-speak").addEventListener("click", () => narrateQuestion());   // 다시듣기 — speak가 항상 cancel하므로 즉시 끊고 현재 문제 재생
 
 /* 색칠판 만들기 — 흑백 base 위에 컬러 레이어, 정답마다 부드러운 둥근 마스크가 번짐 */
 let currentCells = [];
@@ -445,7 +460,9 @@ function nextQuestion() {
     box.appendChild(btn);
   });
   coach("정답을 골라봐!");
-  speakQuestion();
+  // 진행 중 음성(칭찬/인사)이 있으면 그 발화의 onend가 narrateQuestion을 호출. 없으면 즉시 읽음.
+  pendingQuestion = true;
+  if (!(("speechSynthesis" in window) && speechSynthesis.speaking)) narrateQuestion();
 }
 
 const PRAISE = ["수리수리! ✨", "잘했어! 🎉", "정답이야! 👏", "멋져! 🌟", "좋아 좋아!"];
