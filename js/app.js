@@ -285,7 +285,7 @@ function startQuiz() {
   nextQuestion();
   if (stampedToday) { toast(`오늘도 왔구나! 🔥 연속 ${state.stampDays}일 출석!`); stampedToday = false; }
 }
-function exitQuiz() { showRangeHome(); }
+function exitQuiz() { clearViz(); showRangeHome(); }
 $("#quiz-back").addEventListener("click", () => { sTap(); exitQuiz(); });
 $("#q-speak").addEventListener("click", () => speakQuestion());
 
@@ -362,6 +362,7 @@ function distractors( q) {
   return picked;
 }
 function nextQuestion() {
+  clearViz();
   q = makeQuestion();
   $("#q-text").textContent = `${q.a} ${OPS[q.op].sym} ${q.b}`;
   const opts = [q.answer, ...distractors(q)].sort(() => Math.random() - .5);
@@ -402,6 +403,7 @@ function answer(btn, val) {
     const praise = PRAISE[rnd(PRAISE.length)];
     coach(praise, true); speak(praise.replace(/[^가-힣! ]/g, "").trim() || "정답!");
     $$(".choice").forEach(c => c.disabled = true);
+    clearViz();
     revealPatch();
     save();
     setTimeout(afterCorrect, reduceMotion ? 200 : 650);
@@ -410,7 +412,8 @@ function answer(btn, val) {
     btn.classList.add("wrong"); btn.disabled = true; sWrong();
     mascotReact("think");
     const nudge = NUDGE[rnd(NUDGE.length)];
-    coach(nudge); speak("다시 해볼까?");
+    coach(nudge);
+    showViz();          // 양감 시각화(speak은 showViz가 캡션을 읽어줌)
     save();
   }
 }
@@ -467,6 +470,62 @@ $("#reward-dex").addEventListener("click", () => {
 });
 
 function coach(msg, good=false) { const c = $("#coach"); c.textContent = msg; c.classList.toggle("good", good); }
+
+/* 오답 시 양감(量感) 시각화 — 정답 숫자는 숨기고 묶음을 세게 한다 */
+let vizKey = null;   // 현재 그려둔 문제 key(같은 문제면 다시 안 그림)
+function clearViz() {
+  const v = $("#viz");
+  if (v) { v.innerHTML = ""; v.removeAttribute("aria-label"); }
+  vizKey = null;
+}
+// n개의 점을 담은 상자(bundle=묶음 격자, dotCls=점 색 구분)
+function vizBox(n, bundle = false, dotCls = "") {
+  const box = document.createElement("div");
+  box.className = "viz-box" + (bundle ? " bundle" : "");
+  for (let i = 0; i < n; i++) box.appendChild(vizDot(dotCls, i));
+  return box;
+}
+function vizDot(cls = "", i = 0) {
+  const d = document.createElement("span");
+  d.className = "viz-dot" + (cls ? " " + cls : "");
+  d.setAttribute("aria-hidden", "true");
+  if (!reduceMotion) d.style.animationDelay = (i * 0.012) + "s";
+  return d;
+}
+function showViz() {
+  const v = $("#viz"); if (!v || !q) return;
+  if (vizKey === q.key) return;            // 같은 문제 → 중복 방지
+  vizKey = q.key;
+  v.classList.toggle("no-anim", reduceMotion);
+  v.innerHTML = "";
+  const { op, a, b } = q;
+  const cap = document.createElement("div"); cap.className = "viz-cap";
+  const bins = document.createElement("div"); bins.className = "viz-bins";
+  let label = "", voice = "";
+  if (op === "mul") {
+    cap.textContent = `${a}씩 ${b}묶음이야! 세어볼까? 🍎`;
+    for (let i = 0; i < b; i++) bins.appendChild(vizBox(a, true));
+    label = `사과 ${a}개씩 ${b}묶음`; voice = `${a}씩 ${b}묶음이야`;
+  } else if (op === "div") {
+    cap.textContent = `${a}개를 ${b}묶음으로 똑같이 나누면? 🍎`;
+    const per = a / b;                      // makeQuestion이 나누어떨어지게 보장
+    for (let i = 0; i < b; i++) bins.appendChild(vizBox(per, true));
+    label = `사과 ${a}개를 ${b}묶음으로 똑같이 나눔`; voice = `${a}개를 ${b}묶음으로 나눠볼까`;
+  } else if (op === "add") {
+    cap.textContent = `${a}개하고 ${b}개를 더하면? 🍎`;
+    bins.appendChild(vizBox(a)); bins.appendChild(vizBox(b, false, "g2"));
+    label = `사과 ${a}개하고 ${b}개`; voice = `${a}개하고 ${b}개를 더하면`;
+  } else { // sub — a개 중 b개를 흐리게/빗금(없어지는 표시)
+    cap.textContent = `${a}개에서 ${b}개를 빼면? 🍎`;
+    const box = document.createElement("div"); box.className = "viz-box";
+    for (let i = 0; i < a; i++) box.appendChild(vizDot(i >= a - b ? "gone" : "", i));
+    bins.appendChild(box);
+    label = `사과 ${a}개에서 ${b}개 빼기`; voice = `${a}개에서 ${b}개를 빼면`;
+  }
+  v.setAttribute("aria-label", label);
+  v.appendChild(cap); v.appendChild(bins);
+  speak(voice);
+}
 
 /* 번짐 순간 연출 — 글로우 + 스파클 (칸 중심 %좌표) */
 function magicPop(cell) {
