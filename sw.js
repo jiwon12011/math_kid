@@ -1,5 +1,5 @@
 // 수리수리 도감 — 오프라인 캐시 (앱 셸 + 에셋)
-const CACHE = "surisuri-v26";
+const CACHE = "surisuri-v27";
 const EMOJI = ["mascot-fox","mascot-fox-happy","mascot-fox-thinking",
   "nav-play-crayon","nav-dex-book","nav-settings-gear",
   "set-farm","set-forest","set-ocean","set-jungle","set-polar",
@@ -11,8 +11,6 @@ const SHELL = [
   "./css/style.css",
   "./js/app.js", "./js/data.js",
   "./manifest.webmanifest",
-  "./assets/fonts/himelody-korean.woff2",
-  "./assets/fonts/himelody-latin.woff2",
   "./assets/fonts/jua-korean.woff2",
   "./assets/fonts/jua-latin.woff2",
   "./assets/img/ui/sketchbook-board.webp",

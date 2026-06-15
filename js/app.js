@@ -713,7 +713,7 @@ function openLightbox(a) {
 }
 // 캔버스에 [아이콘 이미지 + 텍스트]를 중앙정렬로 그림(이모지 글리프 대신 이미지 사용)
 function drawIconText(ctx, img, text, cx, baseY, fontPx, iconPx, gap = 12) {
-  ctx.font = `${fontPx}px 'Hi Melody', sans-serif`;
+  ctx.font = `${fontPx}px 'Jua', sans-serif`;
   ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
   const tw = ctx.measureText(text).width;
   const total = (img ? iconPx + gap : 0) + tw;
@@ -723,7 +723,7 @@ function drawIconText(ctx, img, text, cx, baseY, fontPx, iconPx, gap = 12) {
   ctx.textAlign = "center";
 }
 async function saveAnimalCard(a) {
-  try { await document.fonts.load("56px 'Hi Melody'"); } catch {}
+  try { await document.fonts.load("56px 'Jua'"); } catch {}
   const W = 560, H = 760, pad = 22;
   const cv = document.createElement("canvas"); cv.width = W; cv.height = H;
   const ctx = cv.getContext("2d");
@@ -1005,7 +1005,7 @@ function drawCover(ctx, img, x, y, w, h) {
 async function makeStorybook(setKey) {
   const set = SETS.find(s => s.key === setKey);
   const animals = ANIMALS.filter(a => a.set === setKey);
-  try { await document.fonts.load("64px 'Hi Melody'"); } catch {}
+  try { await document.fonts.load("64px 'Jua'"); } catch {}
   const cols = 2, rows = Math.ceil(animals.length/cols);
   const cellW = 420, cellH = 540, pad = 28, head = 110;
   const W = pad*2 + cols*cellW + (cols-1)*pad;
@@ -1021,7 +1021,7 @@ async function makeStorybook(setKey) {
     const x = pad + c*(cellW+pad), y = head + r*(cellH+pad);
     ctx.fillStyle = "#fff"; roundRect(ctx, x, y, cellW, cellH, 20); ctx.fill();
     if (img) drawCover(ctx, img, x+10, y+10, cellW-20, cellH-78);
-    ctx.fillStyle = "#4a3b2a"; ctx.font = "40px 'Hi Melody', sans-serif";
+    ctx.fillStyle = "#4a3b2a"; ctx.font = "40px 'Jua', sans-serif";
     ctx.fillText(animals[i].name, x+cellW/2, y+cellH-22);
   });
   cv.toBlob(blob => {
