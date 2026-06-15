@@ -111,8 +111,10 @@ img { -webkit-user-drag: none; user-select: none; }
 .stamp-strip .lbl { font-family: var(--font-hand); font-size: 15px; width: 100%; text-align: center; margin-bottom: 4px; }
 .stamp { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 13px;
   background: #f1e7d3; color: var(--ink-soft); }
-.stamp .stamp-star { width: 18px; height: 18px; object-fit: contain; display: block; }
-.stamp.on { background: linear-gradient(180deg,#ffe49c,#f6c544); box-shadow: 0 2px 0 rgba(74,59,42,.12); }
+.stamp .stamp-star { width: 18px; height: 18px; object-fit: contain; display: block;
+  filter: drop-shadow(0 1px 1px rgba(74,59,42,.35)); }
+/* 채운 스탬프 — 흰 배경 + 금색 테두리로 노란 별이 묻히지 않게 */
+.stamp.on { background: #fff; border: 2px solid var(--gold); box-shadow: 0 2px 0 rgba(74,59,42,.12); }
 .stamp.today { animation: stampPop .5s cubic-bezier(.34,1.56,.64,1); }
 @keyframes stampPop { 0%{transform:scale(0) rotate(-20deg)} 100%{transform:scale(1) rotate(-8deg)} }
 
