@@ -4,7 +4,7 @@
 set -e
 cd "$(dirname "$0")/.."
 cat index.html js/*.js css/*.css > /tmp/_fontsrc.txt
-for spec in "hi-melody:himelody" "jua:jua"; do
+for spec in "jua:jua"; do
   id="${spec%%:*}"; name="${spec##*:}"
   curl -s -L -A "Mozilla/5.0" "https://cdn.jsdelivr.net/fontsource/fonts/${id}@latest/korean-400-normal.woff2" -o /tmp/${name}-full.woff2
   pyftsubset /tmp/${name}-full.woff2 --text-file=/tmp/_fontsrc.txt --flavor=woff2 \
