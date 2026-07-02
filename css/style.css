@@ -37,7 +37,9 @@ body {
   font-family: var(--font-ui);
   color: var(--ink);
   background:
+    radial-gradient(rgba(74,59,42,.04) 1.2px, transparent 1.6px),  /* 종이 질감 — 옅은 점 */
     radial-gradient(120% 80% at 50% -10%, #fff6e0 0%, #ffeccb 45%, #ffe0c7 100%);
+  background-size: 22px 22px, auto;
   background-attachment: fixed;
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
@@ -69,7 +71,7 @@ img { -webkit-user-drag: none; user-select: none; }
 /* ===== 헤더 ===== */
 .topbar {
   display: flex; align-items: center; gap: 10px;
-  padding: 14px 16px 4px;
+  padding: 26px 16px 4px;   /* 상단 스프링 제본 공간 확보 */
 }
 .topbar h1 { margin: 0; font-family: var(--font-hand); font-size: 26px; font-weight: 700; letter-spacing: -.5px; }
 .topbar .magic { width: 34px; height: 34px; }
@@ -136,7 +138,7 @@ img { -webkit-user-drag: none; user-select: none; }
 }
 
 /* 토스트 */
-.toast { position: absolute; left: 50%; top: 14px; transform: translateX(-50%) translateY(-16px);
+.toast { position: absolute; left: 50%; top: 28px; transform: translateX(-50%) translateY(-16px);
   z-index: 40; background: rgba(74,59,42,.92); color: #fff; font-family: var(--font-hand); font-size: 18px;
   padding: 10px 20px; border-radius: 999px; box-shadow: 0 6px 16px rgba(0,0,0,.25);
   opacity: 0; transition: opacity .3s ease, transform .3s ease; pointer-events: none; white-space: nowrap; }
@@ -199,7 +201,7 @@ img { -webkit-user-drag: none; user-select: none; }
 .quick-row .btn { flex: 1; font-size: 18px; min-height: 52px; padding: 0 10px; }
 
 /* ===== 놀기 — 퀴즈 ===== */
-.quiz { flex: 1; display: flex; flex-direction: column; gap: 12px; padding: 8px 16px 14px; min-height: 0; }
+.quiz { flex: 1; display: flex; flex-direction: column; gap: 12px; padding: 22px 16px 14px; min-height: 0; }
 .quiz-head { display: flex; align-items: center; gap: 10px; }
 .iconbtn {
   width: 52px; height: 52px; border-radius: 18px; background: #fff;
@@ -420,7 +422,13 @@ img { -webkit-user-drag: none; user-select: none; }
 }
 .dex-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .dex-card.locked img { filter: grayscale(1) brightness(1.12) contrast(.85) opacity(.32); }
-.dex-card.locked::after { content: "?"; position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--font-hand); font-size: 40px; color: var(--ink-soft); }
+.dex-card.locked::after {
+  content: "?"; position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%);
+  width: 52px; height: 52px; border-radius: 50%;
+  background: rgba(255,255,255,.85); border: 3px dashed rgba(74,59,42,.3);
+  display: grid; place-items: center;
+  font-family: var(--font-hand); font-size: 30px; color: var(--ink-soft);
+}
 .dex-card .nm { position: absolute; left: 0; right: 0; bottom: 0; font-family: var(--font-hand); font-size: 15px; text-align: center; padding: 3px 2px; background: rgba(255,255,255,.92); }
 .dex-card.locked .nm { display: none; }
 .dex-card.shiny { border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold), var(--shadow); }
@@ -495,7 +503,8 @@ img { -webkit-user-drag: none; user-select: none; }
 @keyframes floatUp { from{transform:translateY(0) scale(.6); opacity:1} to{transform:translateY(-60px) scale(1.2); opacity:0} }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+  /* iteration-count도 1로 — 무한 애니메이션이 .001ms 초고속 루프로 도는 것 방지 */
+  *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
   .canvas-inner .color { transition: opacity .001ms; }
 }
 
@@ -579,3 +588,106 @@ input.vol:focus-visible { outline: 3px solid var(--sky); outline-offset: 3px; }
 .reward-rarity { display:flex; align-items:center; justify-content:center; gap:6px; }
 .reward-rarity .ico-sm { width:22px; height:22px; margin-right:0; }
 .stamp-strip .lbl { display:flex; align-items:center; justify-content:center; gap:6px; }
+
+/* ===== 3차 UX·디자인 개선 ===== */
+
+/* 스케치북 스프링 제본 — 앱 상단에 코일 링 반복 (세계관 강화) */
+#app::before {
+  content: ""; position: absolute; top: 3px; left: 14px; right: 14px; height: 20px;
+  z-index: 60; pointer-events: none;
+  background: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='20'%3E%3Cellipse cx='15' cy='14' rx='2.6' ry='2.2' fill='%234a3b2a' opacity='.18'/%3E%3Cpath d='M11 15 C 8 4 22 2 19 13' fill='none' stroke='%23bfae8e' stroke-width='3.2' stroke-linecap='round'/%3E%3C/svg%3E") left center/30px 20px repeat-x;
+}
+
+/* 놀기 홈 제목 — 크레용 물결 밑줄 */
+.range-intro .title::after {
+  content: ""; display: block; width: 150px; height: 8px; margin: 5px auto 0;
+  background: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='8'%3E%3Cpath d='M3 5 Q 21 1 39 5 T 75 5 T 111 5 T 147 5' fill='none' stroke='%23F6C544' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E") center/100% 100% no-repeat;
+  opacity: .9;
+}
+
+/* 시작하기 — 유효하면 가끔 꿈틀(시선 유도), 선택이 모자라면 흐리게 */
+@keyframes startNudge {
+  0%, 86%, 100% { transform: none; }
+  90% { transform: scale(1.025) rotate(-.5deg); }
+  95% { transform: scale(1.01) rotate(.4deg); }
+}
+#start-quiz { animation: startNudge 4s ease-in-out infinite; }
+#start-quiz:active { animation: none; }
+#start-quiz[aria-disabled="true"] {
+  animation: none;
+  filter: saturate(.3) opacity(.75);
+  box-shadow: var(--shadow-sm);
+}
+
+/* 선택 카드 — 손으로 붙인 스티커처럼 살짝 기울임 (transform과 안 겹치게 rotate 속성 사용) */
+.op-card:nth-child(odd)  { rotate: -.5deg; }
+.op-card:nth-child(even) { rotate: .5deg; }
+.dan-card:nth-child(4n+1) { rotate: -.6deg; }
+.dan-card:nth-child(4n+3) { rotate: .6deg; }
+
+/* 데스크탑 hover — 살짝 밝아지고 그림자 상승 (transform 충돌 없이) */
+@media (hover: hover) and (pointer: fine) {
+  .btn:hover, .choice:hover:not(:disabled), .op-card:hover, .dan-card:not([disabled]):hover { filter: brightness(1.03); box-shadow: var(--shadow-lg); }
+  .dex-card:not(.locked):hover { filter: brightness(1.04); }
+  .nav button:not([aria-current="page"]):hover { background: rgba(255,255,255,.6); }
+}
+
+/* 문제 등장 — 크레용으로 쓱 적히는 팝 */
+.q-pop { animation: qPop .38s cubic-bezier(.34,1.56,.64,1); }
+@keyframes qPop { from { transform: scale(.6) rotate(-2deg); opacity: 0; } }
+
+/* 선택지 등장 스태거 */
+.choice.pop-in { animation: choicePop .32s cubic-bezier(.34,1.56,.64,1) backwards; }
+@keyframes choicePop { from { transform: scale(.7) translateY(8px); opacity: 0; } }
+
+/* 정답 — 기쁨의 팝 */
+.choice.correct { animation: correctPop .45s cubic-bezier(.34,1.56,.64,1); }
+@keyframes correctPop { 35% { transform: scale(1.09); } }
+
+/* 진행바 — 은은한 반짝임 흐름 */
+.progress-fill { position: relative; overflow: hidden; }
+.progress-fill::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,.5) 50%, transparent 70%);
+  background-size: 220% 100%;
+  animation: barSheen 2.4s linear infinite;
+}
+@keyframes barSheen { from { background-position: 130% 0; } to { background-position: -80% 0; } }
+
+/* 코치 — 정답 칭찬 때 통통 */
+.coach.good { animation: coachPop .32s cubic-bezier(.34,1.56,.64,1); }
+@keyframes coachPop { 40% { transform: scale(1.12); } }
+
+/* 하단 네비 — 활성 탭 아이콘 바운스 */
+.nav button[aria-current="page"] .ni-img { animation: navBounce .45s cubic-bezier(.34,1.56,.64,1); }
+@keyframes navBounce { 40% { transform: translateY(-6px) scale(1.18); } }
+
+/* 보상 그림 — 둥실둥실 */
+.modal .reward-img { animation: rewardBob 3s ease-in-out infinite; }
+@keyframes rewardBob { 50% { transform: translateY(-5px) rotate(.6deg); } }
+
+/* 도감 카드 — 스케치북 넘기듯 순서대로 등장 */
+.dex-card { animation: dexIn .35s ease backwards; }
+@keyframes dexIn { from { transform: translateY(10px) scale(.94); opacity: 0; } }
+
+/* 오늘의 그림 미리보기 — 폴라로이드 느낌 */
+.next-card {
+  width: 158px; margin: 8px auto 12px; padding: 8px 8px 10px;
+  background: #fff; border-radius: 14px; box-shadow: var(--shadow);
+  border: 2px solid rgba(74,59,42,.06);
+  rotate: -1.6deg; text-align: center;
+}
+.next-card img {
+  width: 100%; aspect-ratio: 3/4; object-fit: cover; border-radius: 10px; display: block;
+  filter: grayscale(1) brightness(1.08) opacity(.45);
+}
+.next-card .cap { font-family: var(--font-hand); font-size: 15px; color: var(--ink-soft); margin-top: 7px; }
+
+/* 세트 완성 뱃지 */
+.set-done {
+  font-size: 13px; color: var(--ink);
+  background: linear-gradient(180deg,#ffe49c,#f6c544);
+  border-radius: 999px; padding: 3px 10px;
+  box-shadow: 0 2px 0 rgba(74,59,42,.12);
+  rotate: -2deg;
+}

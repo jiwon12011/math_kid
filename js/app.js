@@ -269,7 +269,10 @@ function renderOpGrid() {
 }
 function updateDanVisibility() {
   $("#dan-section").style.display = state.ops.includes("mul") ? "block" : "none";
+  updateStartState();
 }
+// 시작 버튼 — 선택이 모자라면 흐리게(눌리긴 함 → 코치가 이유 안내)
+function updateStartState() { $("#start-quiz").setAttribute("aria-disabled", !canStart()); }
 
 const danGrid = $("#dan-grid");
 for (let d = 2; d <= 9; d++) {
@@ -282,12 +285,12 @@ for (let d = 2; d <= 9; d++) {
     const on = c.getAttribute("aria-pressed") === "true";
     c.setAttribute("aria-pressed", !on);
     state.dans = $$(".dan-card", danGrid).filter(x => x.getAttribute("aria-pressed") === "true").map(x => +x.dataset.dan);
-    sTap(); save();
+    sTap(); save(); updateStartState();
   });
   danGrid.appendChild(c);
 }
-$("#pick-all").addEventListener("click", () => { if (state.lockDans) return; sTap(); $$(".dan-card").forEach(c => c.setAttribute("aria-pressed", "true")); state.dans = [2,3,4,5,6,7,8,9]; save(); });
-$("#pick-clear").addEventListener("click", () => { if (state.lockDans) return; sTap(); $$(".dan-card").forEach(c => c.setAttribute("aria-pressed", "false")); state.dans = []; save(); });
+$("#pick-all").addEventListener("click", () => { if (state.lockDans) return; sTap(); $$(".dan-card").forEach(c => c.setAttribute("aria-pressed", "true")); state.dans = [2,3,4,5,6,7,8,9]; save(); updateStartState(); });
+$("#pick-clear").addEventListener("click", () => { if (state.lockDans) return; sTap(); $$(".dan-card").forEach(c => c.setAttribute("aria-pressed", "false")); state.dans = []; save(); updateStartState(); });
 
 // 놀기 화면 단 카드에 lockDans·선택 상태 반영
 function syncDanGrid() {
@@ -304,6 +307,7 @@ function syncDanGrid() {
     else if (state.enabledOps.length >= 2) { lbl.textContent = "✖️ 곱셈은 몇 단으로 놀까?"; lbl.style.display = ""; }
     else { lbl.textContent = ""; lbl.style.display = "none"; }
   }
+  updateStartState();
 }
 
 renderOpGrid();
@@ -455,12 +459,15 @@ function distractors( q) {
 function nextQuestion() {
   clearViz();
   q = makeQuestion();
-  $("#q-text").textContent = `${q.a} ${OPS[q.op].sym} ${q.b}`;
+  const qt = $("#q-text");
+  qt.textContent = `${q.a} ${OPS[q.op].sym} ${q.b}`;
+  qt.classList.remove("q-pop"); void qt.offsetWidth; qt.classList.add("q-pop");   // 문제 팝 재트리거
   const opts = [q.answer, ...distractors(q)].sort(() => Math.random() - .5);
   const box = $("#choices"); box.innerHTML = "";
-  opts.forEach(v => {
+  opts.forEach((v, i) => {
     const btn = document.createElement("button");
-    btn.className = "choice"; btn.textContent = v;
+    btn.className = "choice pop-in"; btn.textContent = v;
+    btn.style.animationDelay = (i * 0.05) + "s";                                  // 선택지 순차 등장
     btn.addEventListener("click", () => answer(btn, v), { once: false });
     box.appendChild(btn);
   });
@@ -481,6 +488,7 @@ let locking = false;
 function answer(btn, val) {
   if (locking) return;
   if (!q) return;
+  btn.style.animationDelay = "";   // 등장 스태거 지연이 정답/오답 애니메이션을 늦추지 않게
   const correct = val === q.answer;
   // 통계 — 그 문제에서 처음 답할 때 1회만(첫 시도 기준), 첫 시도가 정답일 때만 correct
   const op = state.stats.perOp[q.op] = state.stats.perOp[q.op] || { correct: 0, total: 0 };
@@ -705,14 +713,15 @@ function renderDex() {
     const have = animals.filter(a => state.collected.includes(a.id)).length;
     const block = document.createElement("div"); block.className = "set-block";
     block.innerHTML = `
-      <div class="set-head"><span class="name">${ico(set.icon, "ico-sm")}${set.name}</span><span class="count">${have}/${animals.length}</span></div>
+      <div class="set-head"><span class="name">${ico(set.icon, "ico-sm")}${set.name}</span>${have === animals.length ? '<span class="set-done">✓ 완성</span>' : ""}<span class="count">${have}/${animals.length}</span></div>
       <div class="set-bar"><i style="width:${have/animals.length*100}%"></i></div>
       <div class="dex-grid"></div>`;
     const grid = $(".dex-grid", block);
-    animals.forEach(a => {
+    animals.forEach((a, i) => {
       const got = state.collected.includes(a.id);
       const card = document.createElement("button");
       card.className = "dex-card" + (got ? "" : " locked") + (a.rarity === "shiny" ? " shiny" : "");
+      card.style.animationDelay = (i * 0.04) + "s";   // 스케치북 넘기듯 순차 등장
       card.innerHTML = `<img src="${animalImg(a.id)}" alt="${got ? a.name : "아직 못 모은 동물"}" loading="lazy" /><span class="nm">${a.name}</span>`;
       if (got) card.addEventListener("click", () => { sTap(); openLightbox(a); });
       grid.appendChild(card);
@@ -991,13 +1000,28 @@ function renderPlayHome() {
 
   // 이어하기
   const rh = $("#resume-hint"); rh.innerHTML = "";
-  if (state.current && (state.current.revealed||[]).length > 0 && !state.collected.includes(state.current.animalId)) {
+  const inProgress = state.current && (state.current.revealed||[]).length > 0 && !state.collected.includes(state.current.animalId);
+  if (inProgress) {
     const a = ANIMALS.find(x => x.id === state.current.animalId);
     if (a) {
       const b = document.createElement("div"); b.className = "banner resume";
       b.innerHTML = `<img src="${animalImg(a.id)}" alt=""><span>${a.name} 그리는 중 ${state.current.revealed.length}/${PATCHES_PER_ANIMAL}</span><button class="go">이어 그리기</button>`;
       b.querySelector(".go").addEventListener("click", () => { sTap(); startQuiz(); });
       rh.appendChild(b);
+    }
+  }
+
+  // 오늘의 그림 미리보기 — 다음에 색칠할 친구를 흑백 폴라로이드로(진행 중이면 이어하기 배너가 대신)
+  const np = $("#next-preview"); np.innerHTML = "";
+  if (!inProgress && state.collected.length < ANIMALS.length) {
+    const nx = (state.current && ANIMALS.find(x => x.id === state.current.animalId && !state.collected.includes(x.id)))
+             || ANIMALS.find(a => !state.collected.includes(a.id));
+    if (nx) {
+      np.innerHTML = `
+        <div class="next-card">
+          <img src="${animalImg(nx.id)}" alt="다음에 색칠할 동물" />
+          <div class="cap">오늘은 어떤 친구를 만날까?</div>
+        </div>`;
     }
   }
 }
