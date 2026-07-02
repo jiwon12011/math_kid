@@ -1,6 +1,6 @@
 // 수리수리 도감 — 오프라인 캐시 (앱 셸 + 에셋 전체)
 // 설치 시 동물 50장까지 전부 받아둬 인터넷 없이도(비행기·차 안) 안 본 동물이 빈칸으로 안 뜨게 한다.
-const CACHE = "surisuri-v36";
+const CACHE = "surisuri-v37";
 const EMOJI = ["mascot-fox","mascot-fox-happy","mascot-fox-thinking",
   "nav-play-crayon","nav-dex-book","nav-settings-gear",
   "set-farm","set-forest","set-ocean","set-jungle","set-polar",
